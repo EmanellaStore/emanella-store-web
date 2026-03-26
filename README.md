@@ -1,0 +1,1 @@
+# emanella-store-web
