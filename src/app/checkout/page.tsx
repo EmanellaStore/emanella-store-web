@@ -1,57 +1,63 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useTransition } from "react";
 import { useCartStore } from "@/store/useCartStore";
-import Navbar from "../components/shop/Navbar";
-import { createOrder } from "./actions";
+import { Navbar, Footer } from "@/components/shop";
 import { useRouter } from "next/navigation";
 
 export default function CheckoutPage() {
-  const { items, getTotal, clearCart } = useCartStore();
+  const items = useCartStore((state) => state.items);
+  const getTotal = useCartStore((state) => state.getTotal);
+  const clearCart = useCartStore((state) => state.clearCart);
   const router = useRouter();
-  const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(false);
-  const orderSuccessRef = useRef(false); // ← flag para bloquear el guard
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // Guard: solo redirige si NO fue un pedido exitoso
-  useEffect(() => {
-    if (mounted && items.length === 0 && !orderSuccessRef.current) {
-      router.replace("/catalogo");
-    }
-  }, [mounted, items.length, router]);
-
-  if (!mounted) return null;
-  if (items.length === 0 && !orderSuccessRef.current) return null;
+  const [, startTransition] = useTransition();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (items.length === 0) return;
+    
     setLoading(true);
 
     const formData = new FormData(e.currentTarget);
     const data = {
-      name: formData.get("name"),
-      phone: formData.get("phone"),
-      address: formData.get("address"),
-      city: formData.get("city"),
-      notes: formData.get("notes"),
-      paymentMethod: formData.get("paymentMethod"),
+      name: formData.get("name") as string,
+      phone: formData.get("phone") as string,
+      address: formData.get("address") as string,
+      city: formData.get("city") as string,
+      notes: formData.get("notes") as string,
+      paymentMethod: formData.get("paymentMethod") as string,
     };
 
-    const result = await createOrder(data, items);
+    try {
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ data, items }),
+      });
 
-    if (result.success) {
-      orderSuccessRef.current = true; // ← desactiva el guard ANTES de limpiar
-      clearCart();
-      router.push(`/gracias?orderId=${result.orderId}`);
-    } else {
-      alert("Hubo un error: " + result.error);
+      const result = await res.json();
+
+      if (result.success) {
+        clearCart();
+        startTransition(() => {
+          router.push(`/gracias?orderId=${result.orderId}`);
+        });
+      } else {
+        alert("Hubo un error: " + result.error);
+        setLoading(false);
+      }
+    } catch (error) {
+      console.error("Error creando pedido:", error);
+      alert("Hubo un error al procesar el pedido.");
       setLoading(false);
     }
   };
+
+  if (items.length === 0) {
+    router.replace("/catalogo");
+    return null;
+  }
 
   return (
     <main className="min-h-screen bg-cream">
@@ -100,6 +106,7 @@ export default function CheckoutPage() {
           </div>
         </form>
       </section>
+      <Footer />
     </main>
   );
 }

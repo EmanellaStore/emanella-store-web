@@ -21,6 +21,8 @@ export default function AdminLoginPage() {
     });
 
     if (res.ok) {
+      localStorage.setItem("admin_session", "true");
+      window.dispatchEvent(new Event("adminSessionChange"));
       router.push("/admin/orders");
     } else {
       setError("Contraseña incorrecta.");

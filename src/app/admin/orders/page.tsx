@@ -1,5 +1,7 @@
-import db from "@/lib/db";
-import { updateOrderStatus, notifyShipping } from "./actions";
+"use client";
+
+import { useState, useEffect } from "react";
+import Link from "next/link";
 import { OrderStatus } from "@prisma/client";
 
 const statusColors: Record<string, string> = {
@@ -10,16 +12,80 @@ const statusColors: Record<string, string> = {
     CANCELADO: "bg-red-100 text-red-700",
 };
 
-export default async function AdminOrdersPage() {
-    const orders = await db.order.findMany({
-        include: { customer: true },
-        orderBy: { createdAt: "desc" },
-    });
+interface OrderWithCustomer {
+    id: string;
+    status: string;
+    paymentMethod: string;
+    totalAmount: string | number;
+    createdAt: string;
+    customer: {
+        name: string;
+        phone: string;
+        city: string | null;
+    };
+    _count: {
+        items: number;
+    };
+}
+
+export default function AdminOrdersPage() {
+    const [orders, setOrders] = useState<OrderWithCustomer[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+    useEffect(() => {
+        loadOrders();
+    }, []);
+
+    const loadOrders = async () => {
+        try {
+            const res = await fetch("/api/admin/orders");
+            const data = await res.json();
+            setOrders(data.orders || []);
+        } catch (error) {
+            console.error("Error loading orders:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleStatusChange = async (orderId: string, newStatus: OrderStatus, isShipping = false) => {
+        setActionLoading(orderId);
+        try {
+            const res = await fetch("/api/admin/orders/action", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    action: isShipping ? "notifyShipping" : "updateStatus",
+                    orderId,
+                    status: newStatus,
+                }),
+            });
+            
+            if (!res.ok) {
+                throw new Error("Failed to update status");
+            }
+            
+            await loadOrders();
+        } catch (error) {
+            console.error("Error updating status:", error);
+            alert("Error al actualizar el estado");
+        } finally {
+            setActionLoading(null);
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="p-8">
+                <h1 className="font-serif text-3xl text-cacao">Cargando...</h1>
+            </div>
+        );
+    }
 
     return (
-        <main className="min-h-screen bg-cream p-8">
-            <div className="max-w-7xl mx-auto pt-10">
-                {/* Header */}
+        <div className="p-8">
+            <div className="max-w-7xl mx-auto">
                 <div className="flex justify-between items-center mb-8">
                     <div>
                         <h1 className="font-serif text-3xl text-cacao">Pedidos</h1>
@@ -27,15 +93,8 @@ export default async function AdminOrdersPage() {
                             {orders.length} pedidos en total
                         </p>
                     </div>
-                    <a
-                        href="/catalogo"
-                        className="font-sans text-xs text-gold hover:underline tracking-widest uppercase"
-                    >
-                        Ver Tienda →
-                    </a>
                 </div>
 
-                {/* Stats rápidas */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
                     {(["PENDIENTE", "CONFIRMADO", "ENVIADO", "ENTREGADO"] as OrderStatus[]).map((s) => (
                         <div key={s} className="bg-white border border-blush/20 p-4">
@@ -47,7 +106,6 @@ export default async function AdminOrdersPage() {
                     ))}
                 </div>
 
-                {/* Tabla */}
                 <div className="bg-white border border-blush/20 overflow-x-auto">
                     <table className="w-full text-left">
                         <thead>
@@ -55,6 +113,7 @@ export default async function AdminOrdersPage() {
                                 <th className="p-4">Fecha</th>
                                 <th className="p-4">Cliente</th>
                                 <th className="p-4">Ciudad</th>
+                                <th className="p-4">Items</th>
                                 <th className="p-4">Total</th>
                                 <th className="p-4">Pago</th>
                                 <th className="p-4">Estado</th>
@@ -67,16 +126,30 @@ export default async function AdminOrdersPage() {
                                     key={order.id}
                                     className="border-b border-blush/10 hover:bg-cream/40 transition-colors text-sm"
                                 >
-                                    <td className="p-4 text-xs text-warm-gray">
-                                        {new Date(order.createdAt).toLocaleDateString("es-CO")}
+                                    <td className="p-4">
+                                        <Link href={`/admin/orders/${order.id}`} className="block">
+                                            <div className="text-xs text-warm-gray">
+                                                {new Date(order.createdAt).toLocaleDateString("es-CO")}
+                                            </div>
+                                            <div className="text-[10px] text-gold">
+                                                #{order.id.slice(0, 8)}
+                                            </div>
+                                        </Link>
                                     </td>
                                     <td className="p-4">
-                                        <div className="font-sans font-bold text-cacao text-sm">
-                                            {order.customer.name}
-                                        </div>
-                                        <div className="text-xs text-warm-gray">{order.customer.phone}</div>
+                                        <Link href={`/admin/orders/${order.id}`} className="block hover:text-gold transition-colors">
+                                            <div className="font-sans font-bold text-cacao text-sm">
+                                                {order.customer.name}
+                                            </div>
+                                            <div className="text-xs text-warm-gray">{order.customer.phone}</div>
+                                        </Link>
                                     </td>
-                                    <td className="p-4 text-xs text-cacao">{order.customer.city}</td>
+                                    <td className="p-4 text-xs text-cacao">{order.customer.city || "-"}</td>
+                                    <td className="p-4 text-center">
+                                        <span className="inline-flex items-center justify-center w-6 h-6 bg-blush/20 text-xs text-cacao rounded-full">
+                                            {order._count.items}
+                                        </span>
+                                    </td>
                                     <td className="p-4 font-bold text-cacao">
                                         ${Number(order.totalAmount).toLocaleString("es-CO")}
                                     </td>
@@ -90,45 +163,38 @@ export default async function AdminOrdersPage() {
                                     </td>
                                     <td className="p-4">
                                         <div className="flex flex-col gap-1">
+                                            <Link
+                                                href={`/admin/orders/${order.id}`}
+                                                className="text-[10px] bg-gold/20 text-gold px-2 py-1 hover:bg-gold/30 text-center"
+                                            >
+                                                Ver / Editar
+                                            </Link>
                                             {order.status === "PENDIENTE" && (
-                                                <form action={async () => {
-                                                    "use server";
-                                                    await updateOrderStatus(order.id, OrderStatus.CONFIRMADO);
-                                                }}>
-                                                    <button className="text-[10px] bg-blue-100 text-blue-700 px-2 py-1 hover:bg-blue-200 w-full">
-                                                        ✓ Confirmar
-                                                    </button>
-                                                </form>
+                                                <button
+                                                    onClick={() => handleStatusChange(order.id, OrderStatus.CONFIRMADO)}
+                                                    disabled={actionLoading === order.id}
+                                                    className="text-[10px] bg-blue-100 text-blue-700 px-2 py-1 hover:bg-blue-200 w-full disabled:opacity-50"
+                                                >
+                                                    {actionLoading === order.id ? "..." : "Confirmar"}
+                                                </button>
                                             )}
                                             {order.status === "CONFIRMADO" && (
-                                                <form action={async () => {
-                                                    "use server";
-                                                    await notifyShipping(order.id);
-                                                }}>
-                                                    <button className="text-[10px] bg-purple-100 text-purple-700 px-2 py-1 hover:bg-purple-200 w-full">
-                                                        🚚 Marcar Enviado
-                                                    </button>
-                                                </form>
+                                                <button
+                                                    onClick={() => handleStatusChange(order.id, OrderStatus.ENVIADO, true)}
+                                                    disabled={actionLoading === order.id}
+                                                    className="text-[10px] bg-purple-100 text-purple-700 px-2 py-1 hover:bg-purple-200 w-full disabled:opacity-50"
+                                                >
+                                                    {actionLoading === order.id ? "..." : "Marcar Enviado"}
+                                                </button>
                                             )}
                                             {order.status === "ENVIADO" && (
-                                                <form action={async () => {
-                                                    "use server";
-                                                    await updateOrderStatus(order.id, OrderStatus.ENTREGADO);
-                                                }}>
-                                                    <button className="text-[10px] bg-green-100 text-green-700 px-2 py-1 hover:bg-green-200 w-full">
-                                                        ✅ Entregado
-                                                    </button>
-                                                </form>
-                                            )}
-                                            {order.status !== "CANCELADO" && order.status !== "ENTREGADO" && (
-                                                <form action={async () => {
-                                                    "use server";
-                                                    await updateOrderStatus(order.id, OrderStatus.CANCELADO);
-                                                }}>
-                                                    <button className="text-[10px] bg-red-100 text-red-700 px-2 py-1 hover:bg-red-200 w-full">
-                                                        ✕ Cancelar
-                                                    </button>
-                                                </form>
+                                                <button
+                                                    onClick={() => handleStatusChange(order.id, OrderStatus.ENTREGADO)}
+                                                    disabled={actionLoading === order.id}
+                                                    className="text-[10px] bg-green-100 text-green-700 px-2 py-1 hover:bg-green-200 w-full disabled:opacity-50"
+                                                >
+                                                    {actionLoading === order.id ? "..." : "Entregado"}
+                                                </button>
                                             )}
                                         </div>
                                     </td>
@@ -138,6 +204,6 @@ export default async function AdminOrdersPage() {
                     </table>
                 </div>
             </div>
-        </main>
+        </div>
     );
 }

@@ -1,17 +1,36 @@
 "use client";
 import Link from "next/link";
-import { ShoppingBag, Menu, X } from "lucide-react";
+import { ShoppingBag, Menu, X, User, Settings } from "lucide-react";
 import { useCartStore } from "@/store/useCartStore";
-import { useEffect, useState } from "react";
+import { useState, useSyncExternalStore } from "react";
+
+function useCartItemCount() {
+  return useSyncExternalStore(
+    (callback) => {
+      const unsubscribe = useCartStore.subscribe(callback);
+      return unsubscribe;
+    },
+    () => useCartStore.getState().getItemCount(),
+    () => 0
+  );
+}
+
+function useIsAdmin() {
+  const [session, setSession] = useState<string | null>(null);
+  
+  useState(() => {
+    if (typeof window !== "undefined") {
+      setSession(localStorage.getItem("admin_session"));
+    }
+  });
+  
+  return session === "true";
+}
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const itemCount = useCartStore((state) => state.getItemCount());
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const itemCount = useCartItemCount();
+  const isAdmin = useIsAdmin();
 
   return (
     <header className="fixed top-0 w-full z-50 bg-cream/90 backdrop-blur-sm border-b border-blush/40">
@@ -35,9 +54,19 @@ export default function Navbar() {
           </nav>
 
           <div className="flex items-center gap-4">
+            {isAdmin ? (
+              <Link href="/admin" className="p-2 text-cacao hover:text-gold transition-colors relative group" title="Panel Admin">
+                <Settings size={20} strokeWidth={1.5} />
+                <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[8px] text-gold">Admin</span>
+              </Link>
+            ) : (
+              <Link href="/admin/login" className="p-2 text-cacao hover:text-gold transition-colors" title="Iniciar sesión">
+                <User size={20} strokeWidth={1.5} />
+              </Link>
+            )}
             <Link href="/carrito" className="relative p-2 text-cacao hover:text-gold transition-colors">
               <ShoppingBag size={20} strokeWidth={1.5} />
-              {mounted && itemCount > 0 && (
+              {itemCount > 0 && (
                 <span className="absolute top-1 right-1 bg-gold text-cream text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-sans animate-in fade-in zoom-in">
                   {itemCount}
                 </span>

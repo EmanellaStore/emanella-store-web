@@ -1,21 +1,16 @@
 "use client";
 
 import { useCartStore } from "@/store/useCartStore";
-import Navbar from "../components/shop/Navbar";
+import { Navbar, Footer } from "@/components/shop";
 import Image from "next/image";
 import Link from "next/link";
 import { Trash2, Plus, Minus } from "lucide-react";
-import { useEffect, useState } from "react";
 
 export default function CartPage() {
-    const { items, removeItem, updateQuantity, getTotal } = useCartStore();
-    const [mounted, setMounted] = useState(false);
-
-    useEffect(() => {
-        setMounted(true);
-    }, []);
-
-    if (!mounted) return null;
+    const items = useCartStore((state) => state.items);
+    const removeItem = useCartStore((state) => state.removeItem);
+    const updateQuantity = useCartStore((state) => state.updateQuantity);
+    const getTotal = useCartStore((state) => state.getTotal);
 
     const total = getTotal();
 
@@ -161,6 +156,7 @@ export default function CartPage() {
                     </div>
                 </div>
             </section>
+            <Footer />
         </main>
     );
 }

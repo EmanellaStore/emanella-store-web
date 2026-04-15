@@ -1,6 +1,4 @@
-//src/app/gracias/page.tsx
-
-import Navbar from "../components/shop/Navbar";
+import { Navbar, Footer } from "@/components/shop";
 import Link from "next/link";
 
 export default async function SuccessPage({ searchParams, }: {
@@ -28,6 +26,7 @@ export default async function SuccessPage({ searchParams, }: {
               Volver a la tienda  
             </Link>  
           </section>  
+          <Footer />
         </main>  
       );  
     }

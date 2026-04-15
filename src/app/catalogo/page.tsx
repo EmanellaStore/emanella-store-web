@@ -1,5 +1,4 @@
-import Navbar from "../components/shop/Navbar";
-import ProductCard from "../components/shop/ProductCard";
+import { Navbar, ProductCard, Footer } from "@/components/shop";
 import db from "@/lib/db";
 import Link from "next/link";
 
@@ -52,6 +51,12 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                     price: "asc",
                 },
             },
+            images: {
+                orderBy: {
+                    position: "asc",
+                },
+                take: 1,
+            },
         },
         orderBy: {
             createdAt: "desc",
@@ -62,7 +67,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
         id: product.id,
         name: product.name,
         slug: product.slug,
-        imageUrl: product.imageUrl,
+        imageUrl: product.images[0]?.imageUrl || null,
         category: product.category,
         minPrice: product.variants.length > 0 ? Number(product.variants[0].price) : 0,
     }));
@@ -158,6 +163,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                     </div>
                 )}
             </section>
+            <Footer />
         </main>
     );
 }

@@ -5,6 +5,7 @@ const prisma = new PrismaClient();
 async function main() {
   console.log("🌱 Iniciando seed...");
 
+  await prisma.productImage.deleteMany();
   await prisma.productVariant.deleteMany();
   await prisma.product.deleteMany();
 
@@ -14,23 +15,10 @@ async function main() {
       slug: "midnight-velvet",
       description: "Una fragancia intensa y sensual con notas cálidas y elegantes para ocasiones especiales.",
       category: "perfumes",
-      imageUrl: "",
-      isActive: true,
+      images: [],
       variants: [
-        {
-          sku: "MV-50",
-          attributeName: "Tamaño",
-          attributeValue: "50ml",
-          price: "189000.00",
-          stock: 10,
-        },
-        {
-          sku: "MV-100",
-          attributeName: "Tamaño",
-          attributeValue: "100ml",
-          price: "289000.00",
-          stock: 6,
-        },
+        { sku: "MV-50", attributeName: "Tamaño", attributeValue: "50ml", price: "189000.00", stock: 10 },
+        { sku: "MV-100", attributeName: "Tamaño", attributeValue: "100ml", price: "289000.00", stock: 6 },
       ],
     },
     {
@@ -38,23 +26,10 @@ async function main() {
       slug: "ethereal-bloom",
       description: "Perfume floral y fresco con un perfil femenino, suave y sofisticado.",
       category: "perfumes",
-      imageUrl: "",
-      isActive: true,
+      images: [],
       variants: [
-        {
-          sku: "EB-50",
-          attributeName: "Tamaño",
-          attributeValue: "50ml",
-          price: "165000.00",
-          stock: 12,
-        },
-        {
-          sku: "EB-100",
-          attributeName: "Tamaño",
-          attributeValue: "100ml",
-          price: "245000.00",
-          stock: 8,
-        },
+        { sku: "EB-50", attributeName: "Tamaño", attributeValue: "50ml", price: "165000.00", stock: 12 },
+        { sku: "EB-100", attributeName: "Tamaño", attributeValue: "100ml", price: "245000.00", stock: 8 },
       ],
     },
     {
@@ -62,23 +37,10 @@ async function main() {
       slug: "golden-amber",
       description: "Fragancia oriental con carácter, ideal para quienes buscan presencia y duración.",
       category: "perfumes",
-      imageUrl: "",
-      isActive: true,
+      images: [],
       variants: [
-        {
-          sku: "GA-50",
-          attributeName: "Tamaño",
-          attributeValue: "50ml",
-          price: "210000.00",
-          stock: 9,
-        },
-        {
-          sku: "GA-100",
-          attributeName: "Tamaño",
-          attributeValue: "100ml",
-          price: "320000.00",
-          stock: 5,
-        },
+        { sku: "GA-50", attributeName: "Tamaño", attributeValue: "50ml", price: "210000.00", stock: 9 },
+        { sku: "GA-100", attributeName: "Tamaño", attributeValue: "100ml", price: "320000.00", stock: 5 },
       ],
     },
     {
@@ -86,16 +48,9 @@ async function main() {
       slug: "sienna-tote",
       description: "Bolso elegante de uso diario con diseño sobrio y espacioso.",
       category: "bolsos",
-      imageUrl: "",
-      isActive: true,
+      images: [],
       variants: [
-        {
-          sku: "ST-UNICO",
-          attributeName: "Presentación",
-          attributeValue: "Único",
-          price: "350000.00",
-          stock: 4,
-        },
+        { sku: "ST-UNICO", attributeName: "Presentación", attributeValue: "Único", price: "350000.00", stock: 4 },
       ],
     },
     {
@@ -103,16 +58,9 @@ async function main() {
       slug: "pearl-clutch",
       description: "Clutch refinado para eventos y ocasiones especiales.",
       category: "bolsos",
-      imageUrl: "",
-      isActive: true,
+      images: [],
       variants: [
-        {
-          sku: "PC-UNICO",
-          attributeName: "Presentación",
-          attributeValue: "Único",
-          price: "220000.00",
-          stock: 7,
-        },
+        { sku: "PC-UNICO", attributeName: "Presentación", attributeValue: "Único", price: "220000.00", stock: 7 },
       ],
     },
     {
@@ -120,16 +68,9 @@ async function main() {
       slug: "golden-hour-set",
       description: "Set de accesorios con acabado dorado para complementar looks elegantes.",
       category: "accesorios",
-      imageUrl: "",
-      isActive: true,
+      images: [],
       variants: [
-        {
-          sku: "GHS-UNICO",
-          attributeName: "Presentación",
-          attributeValue: "Único",
-          price: "120000.00",
-          stock: 15,
-        },
+        { sku: "GHS-UNICO", attributeName: "Presentación", attributeValue: "Único", price: "120000.00", stock: 15 },
       ],
     },
     {
@@ -137,16 +78,9 @@ async function main() {
       slug: "silk-scarf",
       description: "Pañuelo liviano y sofisticado para elevar cualquier outfit.",
       category: "accesorios",
-      imageUrl: "",
-      isActive: true,
+      images: [],
       variants: [
-        {
-          sku: "SS-UNICO",
-          attributeName: "Presentación",
-          attributeValue: "Único",
-          price: "85000.00",
-          stock: 20,
-        },
+        { sku: "SS-UNICO", attributeName: "Presentación", attributeValue: "Único", price: "85000.00", stock: 20 },
       ],
     },
   ];
@@ -158,8 +92,7 @@ async function main() {
         slug: product.slug,
         description: product.description,
         category: product.category,
-        imageUrl: product.imageUrl,
-        isActive: product.isActive,
+        isActive: true,
         variants: {
           create: product.variants,
         },
