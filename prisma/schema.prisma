@@ -11,6 +11,33 @@ datasource db {
 }
 
 // ─────────────────────────────────────────
+// USUARIOS ( accounts )
+// ─────────────────────────────────────────
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  password     String   // hashed
+  name         String
+  lastName     String?  @map("last_name")
+  phone        String?  @unique
+  role         UserRole @default(CLIENT)
+  isActive     Boolean  @default(true) @map("is_active")
+  resetToken   String?  @map("reset_token") // Token para recuperar contraseña
+  resetExpires DateTime? @map("reset_expires") // Cuándo expira el token
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  customer Customer?
+
+  @@map("users")
+}
+
+enum UserRole {
+  ADMIN
+  CLIENT
+}
+
+// ─────────────────────────────────────────
 // CLIENTES
 // ─────────────────────────────────────────
 model Customer {
@@ -20,10 +47,12 @@ model Customer {
   address   String?
   city      String?
   notes     String?
+  userId    String?  @unique @map("user_id")  // ссылка на User если зарегистрирован
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  orders            Order[]
+  user       User?    @relation(fields: [userId], references: [id])
+  orders     Order[]
   whatsappMessages  WhatsappMessage[]
 
   @@map("customers")

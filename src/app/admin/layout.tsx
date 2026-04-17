@@ -1,6 +1,7 @@
+//src/app/admin/layout.tsx
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Package, ShoppingCart, LogOut } from "lucide-react";
@@ -10,53 +11,43 @@ const navItems = [
   { href: "/admin/products", label: "Productos", icon: Package },
 ];
 
-function getIsAdmin(): boolean {
-  if (typeof window === "undefined") return false;
-  return localStorage.getItem("admin_session") === "true";
-}
-
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const [ready, setReady] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const router = useRouter();
+  const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
-    const checkSession = () => {
-      const isLoginPage = pathname === "/admin/login";
-      const session = getIsAdmin();
-      setIsAdmin(session);
-      setReady(true);
+    // Pequeño delay para asegurar que localStorage esté disponible
+    const checkAuth = () => {
+      const session = localStorage.getItem("admin_session");
+      console.log("Admin layout check, session:", session, "pathname:", pathname);
       
-      if (!session && !isLoginPage) {
-        window.location.href = "/admin/login";
-      } else if (session && isLoginPage) {
-        window.location.href = "/admin/orders";
+      if (session !== "true") {
+        console.log("No admin session, redirecting to /login");
+        router.replace("/login");
+      } else {
+        setIsChecking(false);
       }
     };
-    
-    checkSession();
-  }, [pathname]);
 
-  if (!ready) {
-    return (
-      <div className="min-h-screen bg-cream flex items-center justify-center">
-        <div className="text-cacao">Verificando sesión...</div>
-      </div>
-    );
-  }
-
-  if (!isAdmin && pathname !== "/admin/login") {
-    return null;
-  }
-
-  if (pathname === "/admin/login") {
-    return <>{children}</>;
-  }
+    // Ejecutar el check después de un pequeño delay
+    const timer = setTimeout(checkAuth, 100);
+    return () => clearTimeout(timer);
+  }, [router, pathname]);
 
   const handleLogout = () => {
     localStorage.removeItem("admin_session");
-    window.location.href = "/admin/login";
+    router.push("/catalogo");
   };
+
+  // Mientras verifica autenticación, mostrar loading
+  if (isChecking) {
+    return (
+      <div className="min-h-screen bg-cream flex items-center justify-center">
+        <div className="text-cacao">Verificando acceso...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-cream">

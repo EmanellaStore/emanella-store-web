@@ -1,22 +1,20 @@
+//src/app/api/admin/auth/route.ts
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { verifyUser } from "@/services/auth.service";
 
 export async function POST(request: NextRequest) {
-  const { password } = await request.json();
+  const { email, password } = await request.json();
 
-  if (password !== process.env.ADMIN_PASSWORD) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!email || !password) {
+    return NextResponse.json({ error: "Email y contraseña requeridos" }, { status: 400 });
   }
 
-  const response = NextResponse.json({ ok: true });
+  const user = await verifyUser(email, password);
 
-  response.cookies.set("admin_session", process.env.ADMIN_SECRET!, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 7, // 7 días
-    path: "/",
-  });
+  if (!user || user.role !== "ADMIN") {
+    return NextResponse.json({ error: "Solo administradores pueden acceder" }, { status: 401 });
+  }
 
-  return response;
+  return NextResponse.json({ success: true, admin: true });
 }

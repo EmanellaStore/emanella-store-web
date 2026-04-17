@@ -8,6 +8,7 @@ export interface ProductVariantInput {
 }
 
 export interface ProductImageInput {
+  id?: string;
   imageUrl: string;
   position: number;
 }

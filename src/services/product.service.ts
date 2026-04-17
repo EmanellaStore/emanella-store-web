@@ -62,10 +62,10 @@ export async function updateProduct(productId: string, data: ProductInput) {
     const existingVariantIds = new Set(existingVariants.map((v) => v.id));
     const newVariantIds = new Set(data.variants.filter((v) => v.id).map((v) => v.id));
 
-    const variantIdsInOrders = await tx.orderItem.groupBy({
-      by: ["variantId"],
+    const variantIdsInOrders = await tx.orderItem.findMany({
       where: { variantId: { in: Array.from(existingVariantIds) } },
       select: { variantId: true },
+      distinct: ["variantId"],
     });
     const protectedVariantIds = new Set(variantIdsInOrders.map((v) => v.variantId));
 
