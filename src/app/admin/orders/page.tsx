@@ -3,7 +3,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { OrderStatus } from "@prisma/client";
 
 const statusColors: Record<string, string> = {
   PENDIENTE: "bg-yellow-100 text-yellow-700",
@@ -12,6 +11,8 @@ const statusColors: Record<string, string> = {
   ENTREGADO: "bg-green-100 text-green-700",
   CANCELADO: "bg-red-100 text-red-700",
 };
+
+  type OrderStatusType = "PENDIENTE" | "CONFIRMADO" | "ENVIADO" | "ENTREGADO" | "CANCELADO";
 
 interface OrderWithCustomer {
   id: string;
@@ -59,7 +60,7 @@ export default function AdminOrdersPage() {
 
   const handleStatusChange = async (
     orderId: string,
-    newStatus: OrderStatus,
+    newStatus: OrderStatusType,
     isShipping = false
   ) => {
     setActionLoading(orderId);
@@ -230,7 +231,7 @@ export default function AdminOrdersPage() {
                             onClick={() =>
                               handleStatusChange(
                                 order.id,
-                                OrderStatus.CONFIRMADO
+                                "CONFIRMADO"
                               )
                             }
                             disabled={actionLoading === order.id}
@@ -244,7 +245,7 @@ export default function AdminOrdersPage() {
                             onClick={() =>
                               handleStatusChange(
                                 order.id,
-                                OrderStatus.ENVIADO,
+                                "ENVIADO",
                                 true
                               )
                             }
@@ -261,7 +262,7 @@ export default function AdminOrdersPage() {
                             onClick={() =>
                               handleStatusChange(
                                 order.id,
-                                OrderStatus.ENTREGADO
+                                "ENTREGADO"
                               )
                             }
                             disabled={actionLoading === order.id}

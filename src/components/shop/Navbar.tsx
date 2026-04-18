@@ -23,24 +23,24 @@ export default function Navbar() {
     user: { name: string } | null;
     ready: boolean;
   }>({ isAdmin: false, user: null, ready: false });
-
-  useEffect(() => {
-    const read = () => {
-      // El admin se detecta via un flag en sessionStorage
-      // (seteado en login page, ya que la cookie es httpOnly)
-      const isAdmin = sessionStorage.getItem("is_admin") === "true";
-      let user: { name: string } | null = null;
-      if (!isAdmin) {
-        try {
-          const raw = localStorage.getItem("user_session");
-          if (raw) user = JSON.parse(raw);
-        } catch { /* ignore */ }
-      }
-      setAuthState({ isAdmin, user, ready: true });
-    };
-    read();
-    window.addEventListener("userSessionChange", read);
-    return () => window.removeEventListener("userSessionChange", read);
+  
+  useEffect(() => {  
+    const load = async () => {  
+      try {  
+        const res = await fetch("/api/auth/me", { cache: "no-store" });  
+        const data = await res.json();  
+        setAuthState({  
+          isAdmin: data.user?.role === "ADMIN",  
+          user: data.user,  
+          ready: true,  
+        });  
+      } catch {  
+        setAuthState({ isAdmin: false, user: null, ready: true });  
+      }  
+    };  
+    load();  
+    window.addEventListener("userSessionChange", load);  
+    return () => window.removeEventListener("userSessionChange", load);  
   }, []);
 
   const handleLogout = () => {

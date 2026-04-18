@@ -19,32 +19,25 @@ export default function AuthPage() {
     e.preventDefault();
     setLoading(true);
     setError("");
-
+  
     try {
-      const res = await fetch("/api/auth", {
+      const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "login", ...loginData }),
+        body: JSON.stringify(loginData),
       });
       const data = await res.json();
-
+  
       if (!res.ok || !data.success) {
         setError(data.error || "Error al iniciar sesión");
         return;
       }
-
-      if (data.isAdmin) {
-        // Guardamos flag en sessionStorage para que el Navbar pueda
-        // mostrar el ícono de admin (la cookie es httpOnly, no legible desde JS).
-        sessionStorage.setItem("is_admin", "true");
-        // Hard redirect: el navegador hace un nuevo request HTTP completo.
-        // La cookie httpOnly ya está en el browser (la seteó el servidor).
-        // El middleware la leerá en el nuevo request y permitirá el acceso.
-        window.location.replace("/admin/orders");
+  
+      // Redirect según rol (viene del backend)
+      if (data.user.role === "ADMIN") {
+        window.location.href = "/admin/orders";
       } else {
-        localStorage.setItem("user_session", JSON.stringify(data.user));
-        window.dispatchEvent(new Event("userSessionChange"));
-        window.location.replace("/catalogo");
+        window.location.href = "/catalogo";
       }
     } catch {
       setError("Error de conexión");
@@ -89,7 +82,6 @@ export default function AuthPage() {
         return;
       }
 
-      localStorage.setItem("user_session", JSON.stringify(data.user));
       window.dispatchEvent(new Event("userSessionChange"));
       window.location.replace("/catalogo");
     } catch {

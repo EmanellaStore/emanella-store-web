@@ -1,5 +1,5 @@
 // src/app/api/auth/logout/route.ts
-import { NextResponse } from "next/server";
+/*import { NextResponse } from "next/server";
 
 export async function POST() {
   const response = NextResponse.json({ success: true });
@@ -11,4 +11,12 @@ export async function POST() {
     path: "/",
   });
   return response;
+}*/
+
+import { NextResponse } from "next/server";
+import { clearSessionCookie } from "@/lib/session";
+
+export async function POST() {
+  await clearSessionCookie();
+  return NextResponse.json({ success: true });
 }
