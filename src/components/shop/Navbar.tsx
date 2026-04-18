@@ -1,6 +1,6 @@
-//src/components/shop/Navbar.tsx
-/* eslint-disable react-hooks/set-state-in-effect */
 "use client";
+// src/components/shop/Navbar.tsx
+
 import Link from "next/link";
 import { ShoppingBag, Menu, X, User, Settings, LogOut } from "lucide-react";
 import { useCartStore } from "@/store/useCartStore";
@@ -9,10 +9,7 @@ import { useSyncExternalStore } from "react";
 
 function useCartItemCount() {
   return useSyncExternalStore(
-    (callback) => {
-      const unsubscribe = useCartStore.subscribe(callback);
-      return unsubscribe;
-    },
+    (callback) => useCartStore.subscribe(callback),
     () => useCartStore.getState().getItemCount(),
     () => 0
   );
@@ -21,45 +18,41 @@ function useCartItemCount() {
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const itemCount = useCartItemCount();
-  
-  // Initialize state from localStorage - this is intentional for client-only auth
   const [authState, setAuthState] = useState<{
-    admin: boolean;
-    user: { name: string; role: string } | null;
+    isAdmin: boolean;
+    user: { name: string } | null;
     ready: boolean;
-  }>({
-    admin: false,
-    user: null,
-    ready: false,
-  });
+  }>({ isAdmin: false, user: null, ready: false });
 
-  // Only run on client after mount
   useEffect(() => {
-    const admin = localStorage.getItem("admin_session") === "true";
-    let user: { name: string; role: string } | null = null;
-    
-    if (!admin) {
-      const userSession = localStorage.getItem("user_session");
-      if (userSession) {
+    const read = () => {
+      // El admin se detecta via un flag en sessionStorage
+      // (seteado en login page, ya que la cookie es httpOnly)
+      const isAdmin = sessionStorage.getItem("is_admin") === "true";
+      let user: { name: string } | null = null;
+      if (!isAdmin) {
         try {
-          user = JSON.parse(userSession);
-        } catch {
-          user = null;
-        }
+          const raw = localStorage.getItem("user_session");
+          if (raw) user = JSON.parse(raw);
+        } catch { /* ignore */ }
       }
-    }
-
-    setAuthState({ admin, user, ready: true });
+      setAuthState({ isAdmin, user, ready: true });
+    };
+    read();
+    window.addEventListener("userSessionChange", read);
+    return () => window.removeEventListener("userSessionChange", read);
   }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("user_session");
-    window.location.href = "/catalogo";
+    window.dispatchEvent(new Event("userSessionChange"));
+    window.location.replace("/catalogo");
   };
 
-  const handleAdminLogout = () => {
-    localStorage.removeItem("admin_session");
-    window.location.href = "/catalogo";
+  const handleAdminLogout = async () => {
+    sessionStorage.removeItem("is_admin");
+    await fetch("/api/auth/logout", { method: "POST" });
+    window.location.replace("/login");
   };
 
   return (
@@ -67,15 +60,19 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <Link href="/" className="flex items-center gap-2">
-            <span className="font-serif text-2xl font-semibold text-cacao tracking-widest">Emanella</span>
-            <span className="font-serif text-2xl font-light text-gold tracking-widest">Store</span>
+            <span className="font-serif text-2xl font-semibold text-cacao tracking-widest">
+              Emanella
+            </span>
+            <span className="font-serif text-2xl font-light text-gold tracking-widest">
+              Store
+            </span>
           </Link>
 
           <nav className="hidden md:flex items-center gap-8">
             {["Catálogo", "Perfumes", "Bolsos", "Accesorios"].map((item) => (
               <Link
                 key={item}
-                href={`/catalogo${item !== 'Catálogo' ? `?categoria=${item.toLowerCase()}` : ''}`}
+                href={`/catalogo${item !== "Catálogo" ? `?categoria=${item.toLowerCase()}` : ""}`}
                 className="font-sans text-xs tracking-[0.2em] text-warm-gray hover:text-gold transition-colors uppercase"
               >
                 {item}
@@ -86,11 +83,13 @@ export default function Navbar() {
           <div className="flex items-center gap-4">
             {!authState.ready ? (
               <div className="w-10" />
-            ) : authState.admin ? (
+            ) : authState.isAdmin ? (
               <div className="flex items-center gap-3">
-                <Link href="/admin" className="p-2 text-cacao hover:text-gold transition-colors relative group" title="Panel Admin">
+                <Link href="/admin" className="p-2 text-cacao hover:text-gold transition-colors relative" title="Panel Admin">
                   <Settings size={20} strokeWidth={1.5} />
-                  <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[8px] text-gold">Admin</span>
+                  <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[8px] text-gold">
+                    Admin
+                  </span>
                 </Link>
                 <button onClick={handleAdminLogout} className="p-2 text-cacao hover:text-red-500" title="Cerrar sesión">
                   <LogOut size={20} strokeWidth={1.5} />
@@ -110,14 +109,16 @@ export default function Navbar() {
                 <User size={20} strokeWidth={1.5} />
               </Link>
             )}
+
             <Link href="/carrito" className="relative p-2 text-cacao hover:text-gold transition-colors">
               <ShoppingBag size={20} strokeWidth={1.5} />
               {itemCount > 0 && (
-                <span className="absolute top-1 right-1 bg-gold text-cream text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-sans animate-in fade-in zoom-in">
+                <span className="absolute top-1 right-1 bg-gold text-cream text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-sans">
                   {itemCount}
                 </span>
               )}
             </Link>
+
             <button className="md:hidden p-2 text-cacao" onClick={() => setMenuOpen(!menuOpen)}>
               {menuOpen ? <X size={20} /> : <Menu size={20} />}
             </button>

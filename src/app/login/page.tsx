@@ -1,73 +1,52 @@
-//src/app/login/page.tsx
+// src/app/login/page.tsx
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 type AuthMode = "login" | "register";
 
 export default function AuthPage() {
-  const router = useRouter();
   const [mode, setMode] = useState<AuthMode>("login");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
   const [loginData, setLoginData] = useState({ email: "", password: "" });
   const [registerData, setRegisterData] = useState({
-    name: "",
-    lastName: "",
-    email: "",
-    phone: "",
-    password: "",
-    confirmPassword: "",
+    name: "", lastName: "", email: "", phone: "", password: "", confirmPassword: "",
   });
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
-  
+
     try {
       const res = await fetch("/api/auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "login", ...loginData }),
       });
-  
       const data = await res.json();
-      console.log("Login response:", JSON.stringify(data), "status:", res.status);
-  
-      if (!res.ok) {
-        console.log("Login failed:", data.error);
+
+      if (!res.ok || !data.success) {
         setError(data.error || "Error al iniciar sesión");
-        setLoading(false);
         return;
       }
-  
-      console.log("isAdmin:", data.isAdmin, "role:", data.user?.role);
-  
+
       if (data.isAdmin) {
-        console.log("Setting admin_session...");
-        localStorage.setItem("admin_session", "true");
-        // Asegurar que se escribió
-        const verify = localStorage.getItem("admin_session");
-        console.log("Verified admin_session:", verify);
-        console.log("Redirecting to /admin/orders");
-        
-        // Usar un pequeño timeout para asegurar que localStorage se guardó
-        setTimeout(() => {
-          window.location.href = "/admin/orders";
-        }, 100);
+        // Guardamos flag en sessionStorage para que el Navbar pueda
+        // mostrar el ícono de admin (la cookie es httpOnly, no legible desde JS).
+        sessionStorage.setItem("is_admin", "true");
+        // Hard redirect: el navegador hace un nuevo request HTTP completo.
+        // La cookie httpOnly ya está en el browser (la seteó el servidor).
+        // El middleware la leerá en el nuevo request y permitirá el acceso.
+        window.location.replace("/admin/orders");
       } else {
-        console.log("Setting user_session...");
         localStorage.setItem("user_session", JSON.stringify(data.user));
-        setTimeout(() => {
-          window.location.href = "/catalogo";
-        }, 100);
+        window.dispatchEvent(new Event("userSessionChange"));
+        window.location.replace("/catalogo");
       }
-    } catch (err) {
-      console.error("Login error:", err);
+    } catch {
       setError("Error de conexión");
     } finally {
       setLoading(false);
@@ -84,7 +63,6 @@ export default function AuthPage() {
       setLoading(false);
       return;
     }
-
     if (registerData.password.length < 6) {
       setError("La contraseña debe tener al menos 6 caracteres");
       setLoading(false);
@@ -104,17 +82,16 @@ export default function AuthPage() {
           password: registerData.password,
         }),
       });
-
       const data = await res.json();
 
-      if (!res.ok) {
+      if (!res.ok || !data.success) {
         setError(data.error || "Error al registrar");
         return;
       }
 
       localStorage.setItem("user_session", JSON.stringify(data.user));
       window.dispatchEvent(new Event("userSessionChange"));
-      router.push("/catalogo");
+      window.location.replace("/catalogo");
     } catch {
       setError("Error de conexión");
     } finally {
@@ -127,7 +104,9 @@ export default function AuthPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link href="/" className="inline-block">
-            <span className="font-serif text-4xl font-semibold text-cacao tracking-widest">Emanella</span>
+            <span className="font-serif text-4xl font-semibold text-cacao tracking-widest">
+              Emanella
+            </span>
           </Link>
           <p className="font-sans text-xs text-warm-gray mt-2 tracking-widest uppercase">
             {mode === "login" ? "Iniciar Sesión" : "Crear Cuenta"}
@@ -138,7 +117,9 @@ export default function AuthPage() {
           {mode === "login" ? (
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
-                <label className="block text-xs text-warm-gray mb-1">Correo electrónico</label>
+                <label className="block text-xs text-warm-gray mb-1">
+                  Correo electrónico
+                </label>
                 <input
                   type="email"
                   value={loginData.email}
@@ -146,6 +127,7 @@ export default function AuthPage() {
                   className="w-full border border-blush/50 bg-cream p-3 outline-none focus:border-gold font-sans text-sm"
                   placeholder="tu@email.com"
                   required
+                  autoComplete="email"
                 />
               </div>
               <div>
@@ -156,9 +138,14 @@ export default function AuthPage() {
                   onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
                   className="w-full border border-blush/50 bg-cream p-3 outline-none focus:border-gold font-sans text-sm"
                   required
+                  autoComplete="current-password"
                 />
               </div>
-              {error && <p className="text-red-500 text-xs font-sans">{error}</p>}
+              {error && (
+                <p className="text-red-500 text-xs font-sans bg-red-50 p-2 rounded">
+                  {error}
+                </p>
+              )}
               <button
                 type="submit"
                 disabled={loading}
@@ -167,10 +154,7 @@ export default function AuthPage() {
                 {loading ? "Verificando..." : "Iniciar Sesión"}
               </button>
               <div className="text-center pt-4 space-y-2">
-                <Link
-                  href="/reset-password"
-                  className="text-xs text-gold hover:underline block w-full"
-                >
+                <Link href="/reset-password" className="text-xs text-gold hover:underline block">
                   ¿Olvidaste tu contraseña?
                 </Link>
                 <button
@@ -246,7 +230,11 @@ export default function AuthPage() {
                   required
                 />
               </div>
-              {error && <p className="text-red-500 text-xs font-sans">{error}</p>}
+              {error && (
+                <p className="text-red-500 text-xs font-sans bg-red-50 p-2 rounded">
+                  {error}
+                </p>
+              )}
               <button
                 type="submit"
                 disabled={loading}
