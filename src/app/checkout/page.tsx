@@ -1,64 +1,71 @@
-"use client";
-
-import { useState, useTransition } from "react";
-import { useCartStore } from "@/store/useCartStore";
-import { Navbar, Footer } from "@/components/shop";
-import { useRouter } from "next/navigation";
-
-export default function CheckoutPage() {
-  const items = useCartStore((state) => state.items);
-  const getTotal = useCartStore((state) => state.getTotal);
-  const clearCart = useCartStore((state) => state.clearCart);
-  const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [, startTransition] = useTransition();
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (items.length === 0) return;
-    
-    setLoading(true);
-
-    const formData = new FormData(e.currentTarget);
-    const data = {
-      name: formData.get("name") as string,
-      phone: formData.get("phone") as string,
-      address: formData.get("address") as string,
-      city: formData.get("city") as string,
-      notes: formData.get("notes") as string,
-      paymentMethod: formData.get("paymentMethod") as string,
-    };
-
-    try {
-      const res = await fetch("/api/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ data, items }),
-      });
-
-      const result = await res.json();
-
-      if (result.success) {
-        clearCart();
-        startTransition(() => {
-          router.push(`/gracias?orderId=${result.orderId}`);
-        });
-      } else {
-        alert("Hubo un error: " + result.error);
-        setLoading(false);
-      }
-    } catch (error) {
-      console.error("Error creando pedido:", error);
-      alert("Hubo un error al procesar el pedido.");
-      setLoading(false);
-    }
-  };
-
-  if (items.length === 0) {
-    router.replace("/catalogo");
-    return null;
+"use client";  
+  
+import { useState, useEffect } from "react";  
+import { useCartStore } from "@/store/useCartStore";  
+import { Navbar, Footer } from "@/components/shop";  
+import { useRouter } from "next/navigation";  
+  
+export default function CheckoutPage() {  
+  const items = useCartStore((state) => state.items);  
+  const getTotal = useCartStore((state) => state.getTotal);  
+  const clearCart = useCartStore((state) => state.clearCart);  
+  const router = useRouter();  
+  const [loading, setLoading] = useState(false);  
+  const [submitted, setSubmitted] = useState(false);  
+  
+  // Redirige solo si el carrito está vacío Y no estamos en el proceso de envío.  
+  // Se ejecuta en efecto (post-render), no durante el render.  
+  useEffect(() => {  
+    if (items.length === 0 && !submitted && !loading) {  
+      router.replace("/catalogo");  
+    }  
+  }, [items.length, submitted, loading, router]);  
+  
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {  
+    e.preventDefault();  
+    if (items.length === 0) return;  
+  
+    setLoading(true);  
+  
+    const formData = new FormData(e.currentTarget);  
+    const data = {  
+      name: formData.get("name") as string,  
+      phone: formData.get("phone") as string,  
+      address: formData.get("address") as string,  
+      city: formData.get("city") as string,  
+      notes: formData.get("notes") as string,  
+      paymentMethod: formData.get("paymentMethod") as string,  
+    };  
+  
+    try {  
+      const res = await fetch("/api/checkout", {  
+        method: "POST",  
+        headers: { "Content-Type": "application/json" },  
+        body: JSON.stringify({ data, items }),  
+      });  
+  
+      const result = await res.json();  
+  
+      if (result.success) {  
+        setSubmitted(true); // evita que el useEffect dispare redirect a /catalogo  
+        clearCart();  
+        router.replace(`/gracias?orderId=${result.orderId}`);  
+      } else {  
+        alert("Hubo un error: " + result.error);  
+        setLoading(false);  
+      }  
+    } catch (error) {  
+      console.error("Error creando pedido:", error);  
+      alert("Hubo un error al procesar el pedido.");  
+      setLoading(false);  
+    }  
+  };  
+  
+  // Render "vacío" mientras el efecto redirige, pero sin llamar router durante render  
+  if (items.length === 0 && !submitted) {  
+    return null;  
   }
-
+  
   return (
     <main className="min-h-screen bg-cream">
       <Navbar />

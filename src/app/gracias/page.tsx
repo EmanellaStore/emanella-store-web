@@ -15,7 +15,7 @@ export default async function SuccessPage({ searchParams, }: {
             </p>  
             {orderId ? (  
               <p className="font-sans text-xs tracking-widest uppercase text-gold mb-10">  
-                Código de pedido: {orderId}  
+                Código de pedido: {orderId.slice(0, 8)}  
               </p>  
             ) : null}  
       

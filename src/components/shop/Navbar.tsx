@@ -43,16 +43,15 @@ export default function Navbar() {
     return () => window.removeEventListener("userSessionChange", load);  
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem("user_session");
-    window.dispatchEvent(new Event("userSessionChange"));
-    window.location.replace("/catalogo");
-  };
-
-  const handleAdminLogout = async () => {
-    sessionStorage.removeItem("is_admin");
-    await fetch("/api/auth/logout", { method: "POST" });
-    window.location.replace("/login");
+  const handleLogout = async () => {  
+    try {  
+      await fetch("/api/auth/logout", { method: "POST" });  
+    } catch {  
+      /* ignore */  
+    }  
+    localStorage.removeItem("user_session");  
+    sessionStorage.removeItem("is_admin");  
+    window.location.replace("/catalogo");  
   };
 
   return (
@@ -91,7 +90,7 @@ export default function Navbar() {
                     Admin
                   </span>
                 </Link>
-                <button onClick={handleAdminLogout} className="p-2 text-cacao hover:text-red-500" title="Cerrar sesión">
+                <button onClick={handleLogout} className="p-2 text-cacao hover:text-red-500" title="Cerrar sesión">
                   <LogOut size={20} strokeWidth={1.5} />
                 </button>
               </div>
