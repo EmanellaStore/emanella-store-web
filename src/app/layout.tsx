@@ -1,6 +1,8 @@
 //src/app/layaout.tsx
 import type { Metadata } from "next";
 import "./globals.css";
+import { WhatsAppButton } from "@/components/shop/WhatsAppButton";
+import { ToastContainer } from "@/components/shop";
 
 export const metadata: Metadata = {
   title: "Emanella Store | Perfumes & Accesorios",
@@ -16,6 +18,8 @@ export default function RootLayout({
     <html lang="es">
       <body>
         {children}
+        <ToastContainer />
+        <WhatsAppButton />
       </body>
     </html>
   );

@@ -1,6 +1,8 @@
+//src/components/shop/AddCartSection.tsx
 "use client";
 import { useState } from "react";
 import { useCartStore, CartItem } from "@/store/useCartStore";
+import { useToastStore } from "@/store/useToastStore";
 
 interface Variant {
     id: string;
@@ -25,6 +27,7 @@ export default function AddToCartSection({ product, variants }: AddToCartSection
     const [selectedVariant, setSelectedVariant] = useState<Variant>(variants[0]);
     const addItem = useCartStore((state) => state.addItem);
     const [isAdding, setIsAdding] = useState(false);
+    const showToast = useToastStore((s) => s.showToast);
 
     const handleAddToCart = () => {
         setIsAdding(true);
@@ -42,6 +45,11 @@ export default function AddToCartSection({ product, variants }: AddToCartSection
         };
 
         addItem(item);
+        showToast({
+            title: "1 Artículo agregado",
+            description: product.name,
+            imageUrl: product.imageUrl || undefined,
+        });
 
         // Feedback visual rápido
         setTimeout(() => setIsAdding(false), 800);
@@ -60,8 +68,8 @@ export default function AddToCartSection({ product, variants }: AddToCartSection
                             key={variant.id}
                             onClick={() => setSelectedVariant(variant)}
                             className={`border px-6 py-3 text-sm font-sans transition-all ${selectedVariant.id === variant.id
-                                    ? "bg-cacao text-cream border-cacao"
-                                    : "border-blush text-cacao hover:border-gold hover:text-gold"
+                                ? "bg-cacao text-cream border-cacao"
+                                : "border-blush text-cacao hover:border-gold hover:text-gold"
                                 }`}
                         >
                             {variant.attributeValue} — ${Number(variant.price).toLocaleString("es-CO")}
@@ -76,8 +84,8 @@ export default function AddToCartSection({ product, variants }: AddToCartSection
                     onClick={handleAddToCart}
                     disabled={isAdding}
                     className={`w-full py-5 font-sans text-xs tracking-[0.3em] uppercase transition-all duration-500 shadow-lg ${isAdding
-                            ? "bg-warm-gray text-cream cursor-default"
-                            : "bg-gold text-cream hover:bg-gold-dark shadow-gold/10"
+                        ? "bg-warm-gray text-cream cursor-default"
+                        : "bg-gold text-cream hover:bg-gold-dark shadow-gold/10"
                         }`}
                 >
                     {isAdding ? "¡Añadido!" : "Añadir a la bolsa"}

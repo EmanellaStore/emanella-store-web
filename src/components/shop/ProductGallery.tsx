@@ -74,7 +74,7 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
                 className="object-cover cursor-zoom-in transition-opacity duration-300"
                 onClick={() => openLightbox(currentIndex)}
                 priority={currentIndex === 0}
-                sizes="(max-width: 768px) 100vw, 50vw"
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               />
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300" />
               <button

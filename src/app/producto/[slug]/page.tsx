@@ -1,3 +1,4 @@
+//src/app/product/[slug]/page.tsx
 import db from "@/lib/db";
 import { Navbar, Footer, AddToCartSection, ProductGallery } from "@/components/shop";
 import { notFound } from "next/navigation";
