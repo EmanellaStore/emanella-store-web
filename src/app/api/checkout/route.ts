@@ -4,13 +4,13 @@ import { createOrder } from "@/services/checkout.service";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { data, items } = body;
+    const { data, items, sessionId } = body;
 
     if (!data || !items || !Array.isArray(items)) {
       return NextResponse.json({ success: false, error: "Datos inválidos" }, { status: 400 });
     }
 
-    const result = await createOrder(data, items);
+    const result = await createOrder(data, items, sessionId);
     return NextResponse.json(result);
   } catch (error) {
     console.error("Error in checkout API:", error);

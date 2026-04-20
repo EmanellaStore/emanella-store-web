@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { WhatsAppButton } from "@/components/shop/WhatsAppButton";
 import { ToastContainer } from "@/components/shop";
+import CartSyncProvider from "@/components/shop/CartSyncProvider";
 
 export const metadata: Metadata = {
   title: "Emanella Store | Perfumes & Accesorios",
@@ -20,6 +21,7 @@ export default function RootLayout({
         {children}
         <ToastContainer />
         <WhatsAppButton />
+        <CartSyncProvider />
       </body>
     </html>
   );

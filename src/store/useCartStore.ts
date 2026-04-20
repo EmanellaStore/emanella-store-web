@@ -15,6 +15,10 @@ export interface CartItem {
 
 interface CartState {
   items: CartItem[];
+  sessionId: string;
+  phone: string | null;
+  customerId: string | null;
+  setContact: (data: { phone?: string; customerId?: string }) => void;
   addItem: (item: CartItem) => void;
   removeItem: (variantId: string) => void;
   updateQuantity: (variantId: string, quantity: number) => void;
@@ -23,21 +27,38 @@ interface CartState {
   getItemCount: () => number;
 }
 
+// Generador simple de UUID v4 sin dependencias
+const uuid = () =>
+  'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+
 export const useCartStore = create<CartState>()(
   persist(
     (set, get) => ({
       items: [],
-      
+      sessionId: uuid(),
+      phone: null,
+      customerId: null,
+
+      setContact: ({ phone, customerId }) => {
+        set({
+          phone: phone ?? get().phone,
+          customerId: customerId ?? get().customerId,
+        });
+      },
+
       addItem: (newItem) => {
         const currentItems = get().items;
-        const existingItem = currentItems.find(item => item.variantId === newItem.variantId);
-
-        if (existingItem) {
+        const existing = currentItems.find(i => i.variantId === newItem.variantId);
+        if (existing) {
           set({
-            items: currentItems.map(item =>
-              item.variantId === newItem.variantId
-                ? { ...item, quantity: item.quantity + newItem.quantity }
-                : item
+            items: currentItems.map(i =>
+              i.variantId === newItem.variantId
+                ? { ...i, quantity: i.quantity + newItem.quantity }
+                : i
             ),
           });
         } else {
@@ -45,34 +66,23 @@ export const useCartStore = create<CartState>()(
         }
       },
 
-      removeItem: (variantId) => {
-        set({ items: get().items.filter(item => item.variantId !== variantId) });
-      },
+      removeItem: (variantId) =>
+        set({ items: get().items.filter(i => i.variantId !== variantId) }),
 
       updateQuantity: (variantId, quantity) => {
-        if (quantity <= 0) {
-          get().removeItem(variantId);
-          return;
-        }
+        if (quantity <= 0) return get().removeItem(variantId);
         set({
-          items: get().items.map(item =>
-            item.variantId === variantId ? { ...item, quantity } : item
+          items: get().items.map(i =>
+            i.variantId === variantId ? { ...i, quantity } : i
           ),
         });
       },
 
       clearCart: () => set({ items: [] }),
 
-      getTotal: () => {
-        return get().items.reduce((total, item) => total + (item.price * item.quantity), 0);
-      },
-
-      getItemCount: () => {
-        return get().items.reduce((count, item) => count + item.quantity, 0);
-      },
+      getTotal: () => get().items.reduce((t, i) => t + i.price * i.quantity, 0),
+      getItemCount: () => get().items.reduce((c, i) => c + i.quantity, 0),
     }),
-    {
-      name: 'emanella-cart-storage', // Nombre de la llave en localStorage
-    }
+    { name: 'emanella-cart-storage' }
   )
 );

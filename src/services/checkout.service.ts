@@ -17,7 +17,7 @@ interface CheckoutResult {
   error?: string;
 }
 
-export async function createOrder(data: CheckoutData, cartItems: CartItem[]): Promise<CheckoutResult> {
+export async function createOrder(data: CheckoutData, cartItems: CartItem[], sessionId: string): Promise<CheckoutResult> {
   try {
     const customer = await db.customer.upsert({
       where: { phone: data.phone },
@@ -85,6 +85,12 @@ export async function createOrder(data: CheckoutData, cartItems: CartItem[]): Pr
       items: cartItems,
     });
 
+    if (sessionId) {
+      await db.cart.updateMany({
+        where: { sessionId: sessionId, status: { not: 'RECOVERED' } },
+        data: { status: 'RECOVERED', recoveredAt: new Date(), orderId: order.id },
+      });
+    }
     return { success: true, orderId: order.id };
   } catch (error) {
     console.error("Error creando pedido:", error);

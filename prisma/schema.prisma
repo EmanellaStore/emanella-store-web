@@ -54,6 +54,7 @@ model Customer {
   user       User?    @relation(fields: [userId], references: [id])
   orders     Order[]
   whatsappMessages  WhatsappMessage[]
+  carts Cart[]
 
   @@map("customers")
 }
@@ -102,6 +103,7 @@ model ProductVariant {
 
   product    Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
   orderItems OrderItem[]
+  cartItems CartItem[]
 
   @@map("product_variants")
 }
@@ -199,4 +201,53 @@ enum WaProvider {
   WA_ME
   WABA
   OTHER
+}
+
+// ────  
+// CARRITOS  
+// ────  
+model Cart {  
+  id            String      @id @default(uuid())  
+  customerId    String?     @map("customer_id") // null = anónimo  
+  sessionId     String      @unique @map("session_id") // cookie/localStorage  
+  phone         String?     // capturado en checkout aunque no complete  
+  email         String?  
+  status        CartStatus  @default(ACTIVE)  
+  totalAmount   Decimal     @db.Decimal(10, 2) @default(0) @map("total_amount")  
+  recoveryStep  Int         @default(0) @map("recovery_step") // 0, 1, 2, 3  
+  lastActivity  DateTime    @default(now()) @map("last_activity")  
+  recoveredAt   DateTime?   @map("recovered_at")  
+  orderId       String?     @unique @map("order_id") // si se convirtió  
+  createdAt     DateTime    @default(now()) @map("created_at")  
+  updatedAt     DateTime    @updatedAt @map("updated_at")  
+  
+  customer Customer?  @relation(fields: [customerId], references: [id])  
+  items    CartItem[]  
+  
+  @@index([status, lastActivity])  
+  @@index([phone])  
+  @@map("carts")  
+}  
+  
+enum CartStatus {  
+  ACTIVE       // el usuario sigue navegando  
+  ABANDONED    // 1h sin actividad  
+  RECOVERING   // en flujo de recuperación  
+  RECOVERED    // convertido en pedido  
+  LOST         // 72h sin conversión  
+}  
+  
+model CartItem {  
+  id        String   @id @default(uuid())  
+  cartId    String   @map("cart_id")  
+  variantId String   @map("variant_id")  
+  quantity  Int      @default(1)  
+  unitPrice Decimal  @db.Decimal(10, 2) @map("unit_price")  
+  addedAt   DateTime @default(now()) @map("added_at")  
+  
+  cart    Cart           @relation(fields: [cartId], references: [id], onDelete: Cascade)  
+  variant ProductVariant @relation(fields: [variantId], references: [id])  
+  
+  @@unique([cartId, variantId])  
+  @@map("cart_items")  
 }
