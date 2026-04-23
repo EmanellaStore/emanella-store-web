@@ -1,16 +1,14 @@
 // src/app/api/admin/orders/[id]/action/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { updateOrderItems, updateOrderCustomer, updateOrderStatus, notifyShipping } from "@/services/order.service";
+import { updateOrderItems, updateOrderCustomer, updateOrderStatus } from "@/services/order.service";
 import { OrderStatus } from "@prisma/client";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { action, orderId, items, customerData, status } = body;
+    const { action, orderId, items, customerData, status, trackingCode, trackingCarrier } = body;
 
-    if (!orderId) {
-      return NextResponse.json({ error: "Falta orderId" }, { status: 400 });
-    }
+    if (!orderId) return NextResponse.json({ error: "Falta orderId" }, { status: 400 });
 
     if (action === "updateItems") {
       if (!items || !Array.isArray(items)) {
@@ -21,23 +19,19 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === "updateCustomer") {
-      if (!customerData) {
-        return NextResponse.json({ error: "Faltan datos del cliente" }, { status: 400 });
-      }
-      await updateOrderCustomer(orderId, customerData, "Datos del cliente actualizados desde panel admin");
+      if (!customerData) return NextResponse.json({ error: "Faltan datos del cliente" }, { status: 400 });
+      await updateOrderCustomer(orderId, customerData, "Datos actualizados desde panel admin");
       return NextResponse.json({ success: true });
     }
 
     if (action === "updateStatus") {
-      if (!status) {
-        return NextResponse.json({ error: "Falta status" }, { status: 400 });
-      }
-      await updateOrderStatus(orderId, status as OrderStatus);
-      return NextResponse.json({ success: true });
-    }
-
-    if (action === "notifyShipping") {
-      await notifyShipping(orderId);
+      if (!status) return NextResponse.json({ error: "Falta status" }, { status: 400 });
+      await updateOrderStatus(
+        orderId,
+        status as OrderStatus,
+        undefined,
+        { trackingCode, trackingCarrier }
+      );
       return NextResponse.json({ success: true });
     }
 

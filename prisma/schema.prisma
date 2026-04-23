@@ -1,5 +1,3 @@
-// prisma/schema.prisma
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,71 +8,57 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-// ─────────────────────────────────────────
-// USUARIOS ( accounts )
-// ─────────────────────────────────────────
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
-  password     String   // hashed
+  id           String    @id @default(uuid())
+  email        String    @unique
+  password     String
   name         String
-  lastName     String?  @map("last_name")
-  phone        String?  @unique
-  role         UserRole @default(CLIENT)
-  isActive     Boolean  @default(true) @map("is_active")
-  resetToken   String?  @map("reset_token") // Token para recuperar contraseña
-  resetExpires DateTime? @map("reset_expires") // Cuándo expira el token
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
-
-  customer Customer?
+  lastName     String?   @map("last_name")
+  phone        String?   @unique
+  role         UserRole  @default(CLIENT)
+  isActive     Boolean   @default(true) @map("is_active")
+  resetToken   String?   @map("reset_token")
+  resetExpires DateTime? @map("reset_expires")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  customer     Customer?
 
   @@map("users")
 }
 
-enum UserRole {
-  ADMIN
-  CLIENT
-}
-
-// ─────────────────────────────────────────
-// CLIENTES
-// ─────────────────────────────────────────
 model Customer {
-  id        String   @id @default(uuid())
-  name      String
-  phone     String   @unique
-  address   String?
-  city      String?
-  notes     String?
-  userId    String?  @unique @map("user_id")  // ссылка на User если зарегистрирован
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  user       User?    @relation(fields: [userId], references: [id])
-  orders     Order[]
-  whatsappMessages  WhatsappMessage[]
-  carts Cart[]
+  id               String            @id @default(uuid())
+  name             String
+  phone            String            @unique
+  address          String?
+  city             String?
+  notes            String?
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+  userId           String?           @unique @map("user_id")
+  carts            Cart[]
+  conversations    Conversation[]
+  user             User?             @relation(fields: [userId], references: [id])
+  orders           Order[]
+  whatsappMessages WhatsappMessage[]
 
   @@map("customers")
 }
 
-// ─────────────────────────────────────────
-// PRODUCTOS
-// ─────────────────────────────────────────
 model Product {
-  id          String   @id @default(uuid())
+  id          String                 @id @default(uuid())
   name        String
-  slug        String   @unique
+  slug        String                 @unique
   description String?
-  category    String   // perfumes | zapatos | bolsos | accesorios
-  isActive    Boolean  @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  category    String
+  isActive    Boolean                @default(true) @map("is_active")
+  createdAt   DateTime               @default(now()) @map("created_at")
+  updatedAt   DateTime               @updatedAt @map("updated_at")
+  embedding   Unsupported("vector")?
+  images      ProductImage[]
+  variants    ProductVariant[]
 
-  variants ProductVariant[]
-  images    ProductImage[]
-
+  @@index([embedding])
   @@map("products")
 }
 
@@ -82,70 +66,57 @@ model ProductImage {
   id        String   @id @default(uuid())
   productId String   @map("product_id")
   imageUrl  String   @map("image_url")
-  position  Int      @default(0)  // 0-3 para máximo 4 imágenes
+  position  Int      @default(0)
   createdAt DateTime @default(now()) @map("created_at")
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-  @@map("product_images")
   @@unique([productId, position])
+  @@map("product_images")
 }
 
 model ProductVariant {
-  id             String   @id @default(uuid())
-  productId      String   @map("product_id")
-  sku            String   @unique
-  attributeName  String   @map("attribute_name")  // "Tamaño" | "Color"
-  attributeValue String   @map("attribute_value")  // "50ml" | "Negro"
-  price          Decimal  @db.Decimal(10, 2)
-  stock          Int      @default(0)
-  createdAt      DateTime @default(now()) @map("created_at")
-
-  product    Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
-  orderItems OrderItem[]
-  cartItems CartItem[]
+  id             String      @id @default(uuid())
+  productId      String      @map("product_id")
+  sku            String      @unique
+  attributeName  String      @map("attribute_name")
+  attributeValue String      @map("attribute_value")
+  price          Decimal     @db.Decimal(10, 2)
+  stock          Int         @default(0)
+  createdAt      DateTime    @default(now()) @map("created_at")
+  cartItems      CartItem[]
+  orderItems     OrderItem[]
+  product        Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@map("product_variants")
 }
 
-// ─────────────────────────────────────────
-// PEDIDOS
-// ─────────────────────────────────────────
 model Order {
-  id            String      @id @default(uuid())
-  customerId    String      @map("customer_id")
-  paymentMethod String      @map("payment_method") // transferencia | contraentrega
-  totalAmount   Decimal     @db.Decimal(10, 2) @map("total_amount")
-  status        OrderStatus @default(PENDIENTE)
-  notes         String?
-  createdAt     DateTime    @default(now()) @map("created_at")
-  updatedAt     DateTime    @updatedAt @map("updated_at")
-
-  customer         Customer          @relation(fields: [customerId], references: [id])
-  items            OrderItem[]
+  id               String            @id @default(uuid())
+  customerId       String            @map("customer_id")
+  paymentMethod    String            @map("payment_method")
+  totalAmount      Decimal           @map("total_amount") @db.Decimal(10, 2)
+  status           OrderStatus       @default(PENDIENTE)
+  notes            String?
+  trackingCode    String?   @map("tracking_code")  
+  trackingCarrier String?   @map("tracking_carrier") // Servientrega, Coordinadora, etc.
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
   events           OrderEvent[]
+  items            OrderItem[]
+  customer         Customer          @relation(fields: [customerId], references: [id])
   whatsappMessages WhatsappMessage[]
 
   @@map("orders")
 }
 
-enum OrderStatus {
-  PENDIENTE
-  CONFIRMADO
-  ENVIADO
-  ENTREGADO
-  CANCELADO
-}
-
 model OrderItem {
-  id        String  @id @default(uuid())
-  orderId   String  @map("order_id")
-  variantId String  @map("variant_id")
+  id        String         @id @default(uuid())
+  orderId   String         @map("order_id")
+  variantId String         @map("variant_id")
   quantity  Int
-  unitPrice Decimal @db.Decimal(10, 2) @map("unit_price")
-
-  order   Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  variant ProductVariant @relation(fields: [variantId], references: [id])
+  unitPrice Decimal        @map("unit_price") @db.Decimal(10, 2)
+  order     Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  variant   ProductVariant @relation(fields: [variantId], references: [id])
 
   @@map("order_items")
 }
@@ -156,33 +127,107 @@ model OrderEvent {
   status    OrderStatus
   note      String?
   createdAt DateTime    @default(now()) @map("created_at")
-
-  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order     Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@map("order_events")
 }
 
-// ─────────────────────────────────────────
-// WHATSAPP MESSAGE LOG
-// ─────────────────────────────────────────
 model WhatsappMessage {
-  id          String          @id @default(uuid())
-  orderId     String?         @map("order_id")
-  customerId  String?         @map("customer_id")
-  direction   WaDirection     @default(OUTBOUND)
-  toPhone     String          @map("to_phone")
-  fromPhone   String?         @map("from_phone")
-  messageText String          @map("message_text") @db.Text
-  context     Json?           // JSON: carrito, totales, método pago, etc.
-  status      WaStatus        @default(DRAFT)
-  provider    WaProvider      @default(WA_ME)
-  sentAt      DateTime?       @map("sent_at")
-  createdAt   DateTime        @default(now()) @map("created_at")
-
-  order    Order?    @relation(fields: [orderId], references: [id])
-  customer Customer? @relation(fields: [customerId], references: [id])
+  id          String      @id @default(uuid())
+  orderId     String?     @map("order_id")
+  customerId  String?     @map("customer_id")
+  direction   WaDirection @default(OUTBOUND)
+  toPhone     String      @map("to_phone")
+  fromPhone   String?     @map("from_phone")
+  messageText String      @map("message_text")
+  context     Json?
+  status      WaStatus    @default(DRAFT)
+  provider    WaProvider  @default(WA_ME)
+  sentAt      DateTime?   @map("sent_at")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  customer    Customer?   @relation(fields: [customerId], references: [id])
+  order       Order?      @relation(fields: [orderId], references: [id])
 
   @@map("whatsapp_messages")
+}
+
+model Cart {
+  id           String     @id @default(uuid())
+  customerId   String?    @map("customer_id")
+  sessionId    String     @unique @map("session_id")
+  phone        String?
+  email        String?
+  status       CartStatus @default(ACTIVE)
+  totalAmount  Decimal    @default(0) @map("total_amount") @db.Decimal(10, 2)
+  recoveryStep Int        @default(0) @map("recovery_step")
+  lastActivity DateTime   @default(now()) @map("last_activity")
+  recoveredAt  DateTime?  @map("recovered_at")
+  orderId      String?    @unique @map("order_id")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+  items        CartItem[]
+  customer     Customer?  @relation(fields: [customerId], references: [id])
+
+  @@index([status, lastActivity])
+  @@index([phone])
+  @@map("carts")
+}
+
+model CartItem {
+  id        String         @id @default(uuid())
+  cartId    String         @map("cart_id")
+  variantId String         @map("variant_id")
+  quantity  Int            @default(1)
+  unitPrice Decimal        @map("unit_price") @db.Decimal(10, 2)
+  addedAt   DateTime       @default(now()) @map("added_at")
+  cart      Cart           @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  variant   ProductVariant @relation(fields: [variantId], references: [id])
+
+  @@unique([cartId, variantId])
+  @@map("cart_items")
+}
+
+model Conversation {
+  id            String                @id @default(uuid())
+  customerId    String?               @map("customer_id")
+  phone         String
+  channel       Channel               @default(TELEGRAM)
+  status        ConvStatus            @default(BOT)
+  lastMessageAt DateTime              @default(now()) @map("last_message_at")
+  createdAt     DateTime              @default(now()) @map("created_at")
+  updatedAt     DateTime              @updatedAt @map("updated_at")
+  messages      ConversationMessage[]
+  customer      Customer?             @relation(fields: [customerId], references: [id])
+
+  @@index([phone])
+  @@index([status, lastMessageAt])
+  @@map("conversations")
+}
+
+model ConversationMessage {
+  id             String       @id @default(uuid())
+  conversationId String       @map("conversation_id")
+  role           MsgRole
+  content        String
+  metadata       Json?
+  createdAt      DateTime     @default(now()) @map("created_at")
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@map("conversation_messages")
+}
+
+enum UserRole {
+  ADMIN
+  CLIENT
+}
+
+enum OrderStatus {
+  PENDIENTE
+  CONFIRMADO
+  ENVIADO
+  ENTREGADO
+  CANCELADO
 }
 
 enum WaDirection {
@@ -203,51 +248,27 @@ enum WaProvider {
   OTHER
 }
 
-// ────  
-// CARRITOS  
-// ────  
-model Cart {  
-  id            String      @id @default(uuid())  
-  customerId    String?     @map("customer_id") // null = anónimo  
-  sessionId     String      @unique @map("session_id") // cookie/localStorage  
-  phone         String?     // capturado en checkout aunque no complete  
-  email         String?  
-  status        CartStatus  @default(ACTIVE)  
-  totalAmount   Decimal     @db.Decimal(10, 2) @default(0) @map("total_amount")  
-  recoveryStep  Int         @default(0) @map("recovery_step") // 0, 1, 2, 3  
-  lastActivity  DateTime    @default(now()) @map("last_activity")  
-  recoveredAt   DateTime?   @map("recovered_at")  
-  orderId       String?     @unique @map("order_id") // si se convirtió  
-  createdAt     DateTime    @default(now()) @map("created_at")  
-  updatedAt     DateTime    @updatedAt @map("updated_at")  
-  
-  customer Customer?  @relation(fields: [customerId], references: [id])  
-  items    CartItem[]  
-  
-  @@index([status, lastActivity])  
-  @@index([phone])  
-  @@map("carts")  
-}  
-  
-enum CartStatus {  
-  ACTIVE       // el usuario sigue navegando  
-  ABANDONED    // 1h sin actividad  
-  RECOVERING   // en flujo de recuperación  
-  RECOVERED    // convertido en pedido  
-  LOST         // 72h sin conversión  
-}  
-  
-model CartItem {  
-  id        String   @id @default(uuid())  
-  cartId    String   @map("cart_id")  
-  variantId String   @map("variant_id")  
-  quantity  Int      @default(1)  
-  unitPrice Decimal  @db.Decimal(10, 2) @map("unit_price")  
-  addedAt   DateTime @default(now()) @map("added_at")  
-  
-  cart    Cart           @relation(fields: [cartId], references: [id], onDelete: Cascade)  
-  variant ProductVariant @relation(fields: [variantId], references: [id])  
-  
-  @@unique([cartId, variantId])  
-  @@map("cart_items")  
+enum CartStatus {
+  ACTIVE
+  ABANDONED
+  RECOVERING
+  RECOVERED
+  LOST
+}
+
+enum Channel {
+  TELEGRAM
+  WHATSAPP
+}
+
+enum ConvStatus {
+  BOT
+  HUMAN
+  CLOSED
+}
+
+enum MsgRole {
+  USER
+  ASSISTANT
+  SYSTEM
 }

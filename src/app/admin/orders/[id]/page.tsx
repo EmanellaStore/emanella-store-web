@@ -51,6 +51,8 @@ interface Order {
   paymentMethod: string;
   totalAmount: string;
   notes: string | null;
+  trackingCode?: string | null;
+  trackingCarrier?: string | null;
   createdAt: string;
   customer: Customer;
   items: OrderItem[];
@@ -93,6 +95,9 @@ export default function OrderDetailPage() {
   const [selectedProductId, setSelectedProductId] = useState("");
   const [selectedVariantId, setSelectedVariantId] = useState("");
   const [newQuantity, setNewQuantity] = useState(1);
+  const [showShippingModal, setShowShippingModal] = useState(false);
+  const [trackingCode, setTrackingCode] = useState("");
+  const [trackingCarrier, setTrackingCarrier] = useState("");
 
   // useCallback: loadOrder no se recrea en cada render
   const loadOrder = useCallback(async () => {
@@ -238,24 +243,46 @@ export default function OrderDetailPage() {
 
   const handleStatusChange = async (status: string) => {
     if (!order) return;
+
+    // Si pasa a ENVIADO, pedir código de guía antes
+    if (status === "ENVIADO") {
+      setShowShippingModal(true);
+      return;
+    }
+
+    await executeStatusChange(status);
+  };
+
+  const executeStatusChange = async (status: string, extra?: { trackingCode?: string; trackingCarrier?: string }) => {
+    if (!order) return;
     try {
       const res = await fetch(`/api/admin/orders/${order.id}/action`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          action: status === "ENVIADO" ? "notifyShipping" : "updateStatus",
+          action: "updateStatus",
           orderId: order.id,
           status,
+          ...extra,
         }),
       });
-
       if (!res.ok) throw new Error("Failed to update status");
-      // Actualizar solo el estado localmente, sin recargar todo
       setOrder((prev) => (prev ? { ...prev, status } : prev));
     } catch (err) {
       console.error("Error updating status:", err);
       alert("Error al actualizar el estado");
     }
+  };
+
+  const confirmShipping = async () => {
+    if (!trackingCode.trim()) {
+      alert("Ingresa el código de guía");
+      return;
+    }
+    await executeStatusChange("ENVIADO", { trackingCode, trackingCarrier });
+    setShowShippingModal(false);
+    setTrackingCode("");
+    setTrackingCarrier("");
   };
 
   const calculateTotal = () =>
@@ -323,9 +350,8 @@ export default function OrderDetailPage() {
           </p>
         </div>
         <span
-          className={`ml-auto px-3 py-1 text-xs font-bold rounded ${
-            statusColors[order.status] ?? ""
-          }`}
+          className={`ml-auto px-3 py-1 text-xs font-bold rounded ${statusColors[order.status] ?? ""
+            }`}
         >
           {order.status}
         </span>
@@ -342,11 +368,10 @@ export default function OrderDetailPage() {
                 <button
                   onClick={startEditItems}
                   disabled={!isEditable}
-                  className={`flex items-center gap-2 px-3 py-1 text-xs rounded transition-colors ${
-                    isEditable
-                      ? "bg-cacao text-cream hover:bg-gold"
-                      : "bg-warm-gray/30 text-warm-gray cursor-not-allowed"
-                  }`}
+                  className={`flex items-center gap-2 px-3 py-1 text-xs rounded transition-colors ${isEditable
+                    ? "bg-cacao text-cream hover:bg-gold"
+                    : "bg-warm-gray/30 text-warm-gray cursor-not-allowed"
+                    }`}
                 >
                   <Pencil size={14} />
                   Editar
@@ -523,11 +548,10 @@ export default function OrderDetailPage() {
                   key={status}
                   onClick={() => handleStatusChange(status)}
                   disabled={order.status === status}
-                  className={`px-4 py-2 text-xs font-bold rounded transition-colors ${
-                    order.status === status
-                      ? statusColors[status]
-                      : "bg-cream/50 text-warm-gray hover:bg-blush/20"
-                  }`}
+                  className={`px-4 py-2 text-xs font-bold rounded transition-colors ${order.status === status
+                    ? statusColors[status]
+                    : "bg-cream/50 text-warm-gray hover:bg-blush/20"
+                    }`}
                 >
                   {status}
                 </button>
@@ -546,9 +570,8 @@ export default function OrderDetailPage() {
                   </div>
                   <div>
                     <span
-                      className={`px-2 py-0.5 text-[10px] font-bold rounded ${
-                        statusColors[event.status] ?? ""
-                      }`}
+                      className={`px-2 py-0.5 text-[10px] font-bold rounded ${statusColors[event.status] ?? ""
+                        }`}
                     >
                       {event.status}
                     </span>
@@ -572,9 +595,8 @@ export default function OrderDetailPage() {
                 <button
                   onClick={() => setEditingCustomer(true)}
                   disabled={!isEditable}
-                  className={`p-2 hover:bg-cream/50 ${
-                    !isEditable ? "opacity-50 cursor-not-allowed" : ""
-                  }`}
+                  className={`p-2 hover:bg-cream/50 ${!isEditable ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
                 >
                   <Pencil size={16} />
                 </button>
@@ -696,8 +718,83 @@ export default function OrderDetailPage() {
               )}
             </div>
           </div>
+          {(order.status === "ENVIADO" || order.status === "ENTREGADO") && (
+            <div className="bg-white border border-blush/20 p-6">
+              <h2 className="font-serif text-xl text-cacao mb-4">Envío</h2>
+              <div className="space-y-2 text-sm">
+                <p>
+                  <span className="text-warm-gray">Transportadora:</span>{" "}
+                  <span className="text-cacao">{(order as any).trackingCarrier || "-"}</span>
+                </p>
+                <p>
+                  <span className="text-warm-gray">Guía:</span>{" "}
+                  <span className="text-cacao font-mono">{(order as any).trackingCode || "-"}</span>
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
+      {/* Modal: Ingresar guía de envío */}
+      {showShippingModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white p-6 max-w-md w-full">
+            <h3 className="font-serif text-xl text-cacao mb-4">Información de envío</h3>
+            <p className="text-xs text-warm-gray mb-4">
+              Estos datos se enviarán al cliente por WhatsApp/Telegram.
+            </p>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs text-warm-gray mb-1">Transportadora</label>
+                <select
+                  value={trackingCarrier}
+                  onChange={(e) => setTrackingCarrier(e.target.value)}
+                  className="w-full border border-blush/50 p-2 text-sm bg-white"
+                >
+                  <option value="">Selecciona...</option>
+                  <option value="Servientrega">Servientrega</option>
+                  <option value="Coordinadora">Coordinadora</option>
+                  <option value="Interrapidisimo">Interrapidísimo</option>
+                  <option value="Envia">Envía</option>
+                  <option value="Otra">Otra</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs text-warm-gray mb-1">Código de guía</label>
+                <input
+                  type="text"
+                  value={trackingCode}
+                  onChange={(e) => setTrackingCode(e.target.value)}
+                  placeholder="Ej: 1234567890"
+                  className="w-full border border-blush/50 p-2 text-sm bg-white"
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowShippingModal(false);
+                  setTrackingCode("");
+                  setTrackingCarrier("");
+                }}
+                className="flex-1 px-4 py-2 border border-warm-gray text-warm-gray hover:bg-cream/50 text-sm"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmShipping}
+                className="flex-1 px-4 py-2 bg-gold text-cream hover:bg-gold-dark text-sm"
+              >
+                Marcar como enviado
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

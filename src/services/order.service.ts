@@ -1,57 +1,48 @@
 import db from "@/lib/db";
 import { OrderStatus } from "@prisma/client";
+import { notifyOrderStatusChange } from "@/lib/webhooks";
 
-export async function updateOrderStatus(orderId: string, status: OrderStatus, note?: string) {
+export async function updateOrderStatus(
+  orderId: string,
+  status: OrderStatus,
+  note?: string,
+  extraData?: { trackingCode?: string; trackingCarrier?: string }
+) {
+  const current = await db.order.findUnique({ where: { id: orderId } });
+  if (!current) throw new Error("Pedido no encontrado");
+
+  // No hacer nada si es el mismo estado (evita mensajes duplicados)  
+  if (current.status === status && !extraData?.trackingCode) {
+    return current;
+  }
+
   const [order] = await db.$transaction([
     db.order.update({
       where: { id: orderId },
-      data: { status },
+      data: {
+        status,
+        ...(extraData?.trackingCode !== undefined && { trackingCode: extraData.trackingCode }),
+        ...(extraData?.trackingCarrier !== undefined && { trackingCarrier: extraData.trackingCarrier }),
+      },
     }),
     db.orderEvent.create({
       data: {
         orderId,
         status,
-        note: note || `Estado actualizado a ${status} desde el panel admin.`,
+        note: note || `Estado actualizado a ${status}`,
       },
     }),
   ]);
 
+  // Dispara el webhook a n8n SIEMPRE que cambie de estado  
+  await notifyOrderStatusChange(orderId);
+
   return order;
-}
-
-export async function notifyShipping(orderId: string) {
-  const order = await db.order.findUnique({
-    where: { id: orderId },
-    include: { customer: true },
-  });
-
-  if (!order) throw new Error("Pedido no encontrado");
-
-  await updateOrderStatus(orderId, OrderStatus.ENVIADO);
-
-  const webhookUrl = process.env.N8N_SHIPPING_WEBHOOK_URL;
-  if (webhookUrl) {
-    fetch(webhookUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        orderId: order.id,
-        customer: {
-          name: order.customer.name,
-          phone: order.customer.phone,
-          address: order.customer.address,
-          city: order.customer.city,
-        },
-        total: order.totalAmount,
-        paymentMethod: order.paymentMethod,
-      }),
-    }).catch((err) => console.error("n8n shipping webhook error:", err));
-  }
 }
 
 export async function getOrders() {
   return db.order.findMany({
-    include: { 
+    include: {
       customer: true,
       _count: { select: { items: true } }
     },
