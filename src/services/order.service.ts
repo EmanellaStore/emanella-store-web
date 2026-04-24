@@ -11,18 +11,27 @@ export async function updateOrderStatus(
   const current = await db.order.findUnique({ where: { id: orderId } });
   if (!current) throw new Error("Pedido no encontrado");
 
-  // No hacer nada si es el mismo estado (evita mensajes duplicados)  
+  // No hacer nada si es el mismo estado (evita mensajes duplicados)
   if (current.status === status && !extraData?.trackingCode) {
     return current;
   }
+
+  // Primera vez que pasa a ENTREGADO → dispara métricas del cliente
+  const isBecomingDelivered =
+    status === OrderStatus.ENTREGADO && !current.deliveredAt;
 
   const [order] = await db.$transaction([
     db.order.update({
       where: { id: orderId },
       data: {
         status,
-        ...(extraData?.trackingCode !== undefined && { trackingCode: extraData.trackingCode }),
-        ...(extraData?.trackingCarrier !== undefined && { trackingCarrier: extraData.trackingCarrier }),
+        ...(isBecomingDelivered && { deliveredAt: new Date() }),
+        ...(extraData?.trackingCode !== undefined && {
+          trackingCode: extraData.trackingCode,
+        }),
+        ...(extraData?.trackingCarrier !== undefined && {
+          trackingCarrier: extraData.trackingCarrier,
+        }),
       },
     }),
     db.orderEvent.create({
@@ -32,9 +41,22 @@ export async function updateOrderStatus(
         note: note || `Estado actualizado a ${status}`,
       },
     }),
+    // Solo incluimos el update del customer si corresponde
+    ...(isBecomingDelivered
+      ? [
+          db.customer.update({
+            where: { id: current.customerId },
+            data: {
+              lastPurchaseAt: new Date(),
+              orderCount: { increment: 1 },
+              totalSpent: { increment: current.totalAmount },
+            },
+          }),
+        ]
+      : []),
   ]);
 
-  // Dispara el webhook a n8n SIEMPRE que cambie de estado  
+  // Dispara el webhook a n8n SIEMPRE que cambie de estado
   await notifyOrderStatusChange(orderId);
 
   return order;
@@ -44,7 +66,7 @@ export async function getOrders() {
   return db.order.findMany({
     include: {
       customer: true,
-      _count: { select: { items: true } }
+      _count: { select: { items: true } },
     },
     orderBy: { createdAt: "desc" },
   });
@@ -87,7 +109,10 @@ export async function updateOrderItems(
 
   if (!order) throw new Error("Pedido no encontrado");
 
-  const newTotal = items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
+  const newTotal = items.reduce(
+    (sum, item) => sum + item.unitPrice * item.quantity,
+    0
+  );
 
   const updatedOrder = await db.$transaction(async (tx) => {
     await tx.orderItem.deleteMany({ where: { orderId } });
@@ -120,7 +145,9 @@ export async function updateOrderItems(
       data: {
         orderId,
         status: order.status,
-        note: adminNote || `Items actualizados. Nuevo total: $${newTotal.toLocaleString("es-CO")}`,
+        note:
+          adminNote ||
+          `Items actualizados. Nuevo total: $${newTotal.toLocaleString("es-CO")}`,
       },
     });
 
@@ -164,7 +191,9 @@ export async function updateOrderCustomer(
       data: {
         orderId,
         status: order.status,
-        note: adminNote || `Datos del cliente actualizados: ${customerData.name}, ${customerData.phone}`,
+        note:
+          adminNote ||
+          `Datos del cliente actualizados: ${customerData.name}, ${customerData.phone}`,
       },
     });
 

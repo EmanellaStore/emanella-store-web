@@ -1,15 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useCartStore } from "@/store/useCartStore";
 import { Navbar, Footer } from "@/components/shop";
 import { useRouter } from "next/navigation";
+
+const SHIPPING_COST = 15000; // flat por ahora; luego se puede calcular por ciudad
+const FREE_SHIPPING_THRESHOLD = 200000;
 
 export default function CheckoutPage() {
   const items = useCartStore((state) => state.items);
   const getTotal = useCartStore((state) => state.getTotal);
   const clearCart = useCartStore((state) => state.clearCart);
   const sessionId = useCartStore((state) => state.sessionId);
+  const customerId = useCartStore((state) => state.customerId);
   const setContact = useCartStore((state) => state.setContact);
   const router = useRouter();
 
@@ -17,28 +21,81 @@ export default function CheckoutPage() {
   const [submitted, setSubmitted] = useState(false);
   const [isRestoring, setIsRestoring] = useState(true);
 
-  // Detecta si viene de un link de recuperación y espera a que se restaure
+  // ===== CUPONES =====
+  const [couponCode, setCouponCode] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<{
+    code: string;
+    discount: number;
+    freeShipping: boolean;
+  } | null>(null);
+  const [couponError, setCouponError] = useState("");
+  const [couponLoading, setCouponLoading] = useState(false);
+
+  // ===== TOTALES =====
+  const subtotal = useMemo(() => getTotal(), [getTotal, items]);
+  const shipping = useMemo(() => {
+    if (appliedCoupon?.freeShipping) return 0;
+    if (subtotal >= FREE_SHIPPING_THRESHOLD) return 0;
+    return SHIPPING_COST;
+  }, [subtotal, appliedCoupon]);
+  const discount = appliedCoupon?.discount ?? 0;
+  const total = Math.max(0, subtotal + shipping - discount);
+
+  // ===== RESTORE FLOW =====
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const hasRestoreParam = params.has("cart");
-
     if (!hasRestoreParam) {
       setIsRestoring(false);
       return;
     }
-
-    // Damos 2s máximo para que el hook useCartSync termine la restauración
     const timer = setTimeout(() => setIsRestoring(false), 2000);
     return () => clearTimeout(timer);
   }, []);
 
-  // Redirige SOLO cuando ya terminamos de restaurar y el carrito sigue vacío
   useEffect(() => {
     if (isRestoring || submitted || loading) return;
-    if (items.length === 0) {
-      router.replace("/catalogo");
-    }
+    if (items.length === 0) router.replace("/catalogo");
   }, [items.length, submitted, loading, isRestoring, router]);
+
+  // ===== CUPÓN: aplicar / quitar =====
+  const applyCoupon = async () => {
+    if (!couponCode.trim()) return;
+    setCouponLoading(true);
+    setCouponError("");
+    try {
+      const res = await fetch("/api/coupons/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code: couponCode.trim().toUpperCase(),
+          subtotal,
+          customerId: customerId || null,
+        }),
+      });
+      const data = await res.json();
+      if (!data.valid) {
+        setCouponError(data.error || "Cupón no válido");
+        setAppliedCoupon(null);
+      } else {
+        setAppliedCoupon({
+          code: data.coupon.code,
+          discount: data.discount,
+          freeShipping: data.coupon.type === "FREE_SHIPPING",
+        });
+      }
+    } catch {
+      setCouponError("Error validando cupón");
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  const removeCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode("");
+    setCouponError("");
+  };
 
   const handlePhoneBlur = (e: React.FocusEvent<HTMLInputElement>) => {
     const phone = e.target.value.trim();
@@ -48,7 +105,6 @@ export default function CheckoutPage() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (items.length === 0) return;
-
     setLoading(true);
 
     const formData = new FormData(e.currentTarget);
@@ -61,13 +117,19 @@ export default function CheckoutPage() {
       paymentMethod: formData.get("paymentMethod") as string,
     };
 
+    console.log("[checkout-front] appliedCoupon:", appliedCoupon);
+    console.log("[checkout-front] sending couponCode:", appliedCoupon?.code);
     try {
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ data, items, sessionId }),
+        body: JSON.stringify({
+          data,
+          items,
+          sessionId,
+          couponCode: appliedCoupon?.code,
+        }),
       });
-
       const result = await res.json();
 
       if (result.success) {
@@ -85,7 +147,6 @@ export default function CheckoutPage() {
     }
   };
 
-  // Mientras restauramos, mostramos un loader (no null, para no flashear redirect)
   if (isRestoring) {
     return (
       <main className="min-h-screen bg-cream flex items-center justify-center">
@@ -99,19 +160,25 @@ export default function CheckoutPage() {
     );
   }
 
-  if (items.length === 0 && !submitted) {
-    return null;
-  }
+  if (items.length === 0 && !submitted) return null;
 
   return (
     <main className="min-h-screen bg-cream">
       <Navbar />
       <section className="pt-32 pb-20 px-4 max-w-4xl mx-auto">
-        <h1 className="font-serif text-4xl text-cacao mb-10 text-center">Finalizar Pedido</h1>
+        <h1 className="font-serif text-4xl text-cacao mb-10 text-center">
+          Finalizar Pedido
+        </h1>
 
-        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-12">
+        <form
+          onSubmit={handleSubmit}
+          className="grid grid-cols-1 md:grid-cols-2 gap-12"
+        >
+          {/* ===== COLUMNA IZQUIERDA ===== */}
           <div className="space-y-6">
-            <h2 className="font-serif text-2xl text-cacao border-b border-blush/30 pb-2">Tus Datos</h2>
+            <h2 className="font-serif text-2xl text-cacao border-b border-blush/30 pb-2">
+              Tus Datos
+            </h2>
             <div className="space-y-4">
               <input
                 required
@@ -146,28 +213,109 @@ export default function CheckoutPage() {
             </div>
           </div>
 
+          {/* ===== COLUMNA DERECHA ===== */}
           <div className="space-y-6">
-            <h2 className="font-serif text-2xl text-cacao border-b border-blush/30 pb-2">Método de Pago</h2>
+            <h2 className="font-serif text-2xl text-cacao border-b border-blush/30 pb-2">
+              Método de Pago
+            </h2>
             <div className="space-y-3">
               <label className="flex items-center gap-3 p-4 border border-blush/50 bg-white/50 cursor-pointer hover:border-gold transition-colors">
-                <input type="radio" name="paymentMethod" value="contraentrega" defaultChecked className="accent-gold" />
-                <span className="font-sans text-sm text-cacao">Pago Contraentrega</span>
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  value="contraentrega"
+                  defaultChecked
+                  className="accent-gold"
+                />
+                <span className="font-sans text-sm text-cacao">
+                  Pago Contraentrega
+                </span>
               </label>
               <label className="flex items-center gap-3 p-4 border border-blush/50 bg-white/50 cursor-pointer hover:border-gold transition-colors">
-                <input type="radio" name="paymentMethod" value="transferencia" className="accent-gold" />
-                <span className="font-sans text-sm text-cacao">Transferencia Bancaria</span>
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  value="transferencia"
+                  className="accent-gold"
+                />
+                <span className="font-sans text-sm text-cacao">
+                  Transferencia Bancaria
+                </span>
               </label>
             </div>
 
-            <div className="bg-cacao p-6 text-cream space-y-4">
+            {/* ===== CUPÓN ===== */}
+            <div className="bg-white/50 border border-blush/30 p-4 space-y-2">
+              <p className="font-sans text-xs uppercase tracking-widest text-cacao">
+                ¿Tienes un cupón?
+              </p>
+              {!appliedCoupon ? (
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                    placeholder="Código"
+                    className="flex-1 border border-blush/50 bg-white px-3 py-2 text-sm outline-none focus:border-gold uppercase"
+                  />
+                  <button
+                    type="button"
+                    onClick={applyCoupon}
+                    disabled={couponLoading || !couponCode.trim()}
+                    className="px-4 py-2 bg-cacao text-cream text-xs uppercase tracking-widest disabled:opacity-50"
+                  >
+                    {couponLoading ? "..." : "Aplicar"}
+                  </button>
+                </div>
+              ) : (
+                <div className="flex justify-between items-center bg-green-50 border border-green-200 px-3 py-2">
+                  <span className="text-xs text-green-700 font-bold">
+                    ✓ {appliedCoupon.code}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={removeCoupon}
+                    className="text-xs text-red-600 underline"
+                  >
+                    Quitar
+                  </button>
+                </div>
+              )}
+              {couponError && (
+                <p className="text-xs text-red-600">{couponError}</p>
+              )}
+            </div>
+
+            {/* ===== RESUMEN ===== */}
+            <div className="bg-cacao p-6 text-cream space-y-3">
               <div className="flex justify-between font-sans text-xs tracking-widest uppercase opacity-80">
-                <span>Total a pagar</span>
-                <span>${getTotal().toLocaleString("es-CO")}</span>
+                <span>Subtotal</span>
+                <span>${subtotal.toLocaleString("es-CO")}</span>
+              </div>
+              <div className="flex justify-between font-sans text-xs tracking-widest uppercase opacity-80">
+                <span>Envío</span>
+                <span>
+                  {shipping === 0
+                    ? "GRATIS"
+                    : `$${shipping.toLocaleString("es-CO")}`}
+                </span>
+              </div>
+              {discount > 0 && (
+                <div className="flex justify-between font-sans text-xs tracking-widest uppercase text-green-300">
+                  <span>Descuento</span>
+                  <span>-${discount.toLocaleString("es-CO")}</span>
+                </div>
+              )}
+              <div className="border-t border-cream/20 pt-3 flex justify-between font-sans text-sm tracking-widest uppercase">
+                <span>Total</span>
+                <span className="text-gold font-bold">
+                  ${total.toLocaleString("es-CO")}
+                </span>
               </div>
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-gold py-4 text-xs uppercase tracking-[0.3em] hover:bg-gold-dark transition-colors disabled:bg-warm-gray"
+                className="w-full bg-gold py-4 text-xs uppercase tracking-[0.3em] hover:bg-gold-dark transition-colors disabled:bg-warm-gray mt-4"
               >
                 {loading ? "Procesando..." : "Confirmar Pedido"}
               </button>

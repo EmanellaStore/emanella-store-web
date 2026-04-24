@@ -4,6 +4,7 @@ import "./globals.css";
 import { WhatsAppButton } from "@/components/shop/WhatsAppButton";
 import { ToastContainer } from "@/components/shop";
 import CartSyncProvider from "@/components/shop/CartSyncProvider";
+import WelcomeCaptureModal from "@/components/shop/WelcomeCaptureModel";
 
 export const metadata: Metadata = {
   title: "Emanella Store | Perfumes & Accesorios",
@@ -22,6 +23,7 @@ export default function RootLayout({
         <ToastContainer />
         <WhatsAppButton />
         <CartSyncProvider />
+        <WelcomeCaptureModal />
       </body>
     </html>
   );
