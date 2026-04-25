@@ -21,6 +21,7 @@ export default function WelcomeCaptureModal() {
       alert('Teléfono válido: 10 dígitos empezando en 3');
       return;
     }
+    
     // crea/actualiza customer + guarda en store
     const res = await fetch('/api/customers/upsert', {
       method: 'POST',

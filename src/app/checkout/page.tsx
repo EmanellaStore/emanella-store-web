@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useCartStore } from "@/store/useCartStore";
 import { Navbar, Footer } from "@/components/shop";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 const SHIPPING_COST = 15000; // flat por ahora; luego se puede calcular por ciudad
 const FREE_SHIPPING_THRESHOLD = 200000;
@@ -40,7 +40,8 @@ export default function CheckoutPage() {
   }, [subtotal, appliedCoupon]);
   const discount = appliedCoupon?.discount ?? 0;
   const total = Math.max(0, subtotal + shipping - discount);
-
+  const searchParams = useSearchParams();
+  
   // ===== RESTORE FLOW =====
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -57,6 +58,14 @@ export default function CheckoutPage() {
     if (isRestoring || submitted || loading) return;
     if (items.length === 0) router.replace("/catalogo");
   }, [items.length, submitted, loading, isRestoring, router]);
+
+  // pre-cargar cupón desde URL ?c=CODIGO
+  useEffect(() => {  
+    const couponFromUrl = searchParams.get('c');  
+    if (couponFromUrl && !appliedCoupon) {  
+      setCouponCode(couponFromUrl.toUpperCase());  
+    }  
+  }, [searchParams]);
 
   // ===== CUPÓN: aplicar / quitar =====
   const applyCoupon = async () => {

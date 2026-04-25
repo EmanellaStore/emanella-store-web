@@ -35,6 +35,7 @@ export async function GET(req: NextRequest) {
       // ============ REVIEW PENDING ============
       case 'review-pending': {
         const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
+        console.log('threee', threeDaysAgo)
         const orders = await db.order.findMany({
           where: {
             status: 'ENTREGADO',
@@ -66,7 +67,8 @@ export async function GET(req: NextRequest) {
 
         const target = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
         const windowStart = new Date(target.getTime() - 6 * 60 * 60 * 1000);
-
+        console.log('target', target)
+        console.log('windowStart', windowStart)
         const customers = await db.customer.findMany({
           where: {
             lastPurchaseAt: { gte: windowStart, lte: target },
@@ -96,6 +98,8 @@ export async function GET(req: NextRequest) {
         const ninetyDaysAgo = new Date(
           now.getTime() - 90 * 24 * 60 * 60 * 1000,
         );
+        console.log('ninetyDaysAgo', ninetyDaysAgo)
+
         const customers = await db.customer.findMany({
           where: {
             lastPurchaseAt: { lt: ninetyDaysAgo },

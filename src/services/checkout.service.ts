@@ -28,7 +28,7 @@ export async function createOrder(
   sessionId: string,
   couponCode?: string
 ): Promise<CheckoutResult> {
-  console.log("[service] arguments.length:", arguments.length);  
+  console.log("[service] arguments.length:", arguments.length);
   console.log("[service] couponCode param:", couponCode);
   try {
     // 1) Upsert del cliente
@@ -93,9 +93,6 @@ export async function createOrder(
     const totalAmount = Math.max(0, subtotal + shipping - discount);
 
     // 6) Transacción: crea order + items + event + decrementa stock + registra uso de cupón
-    console.log("[checkout] couponCode recibido:", couponCode);
-    console.log("[checkout] validCoupon:", validCoupon?.code, validCoupon?.id);
-    console.log("[checkout] discount:", discount, "shipping:", shipping, "total:", totalAmount);
     const order = await db.$transaction(async (tx) => {
       const newOrder = await tx.order.create({
         data: {
@@ -130,6 +127,24 @@ export async function createOrder(
           data: { stock: { decrement: item.quantity } },
         });
       }
+
+      //actualiza métricas del cliente al crear pedido  
+      await tx.customer.update({
+        where: { id: customer.id },
+        data: {
+          lastPurchaseAt: new Date(),
+          orderCount: { increment: 1 },
+          totalSpent: { increment: totalAmount },
+        },
+      });
+
+      //marca que el cliente tiene actividad reciente (evita winback falso)  
+      await tx.customer.update({
+        where: { id: customer.id },
+        data: {
+          lastPurchaseAt: new Date(), // se actualiza también en ENTREGADO con totales  
+        },
+      });
 
       // Registra uso de cupón
       if (validCoupon) {
