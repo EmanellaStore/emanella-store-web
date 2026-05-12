@@ -1,0 +1,621 @@
+{
+  "name": "order-lifecycle",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "order-status",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -288,
+        48
+      ],
+      "id": "660589de-11a2-47a3-9125-5947dd640bfa",
+      "name": "Webhook",
+      "webhookId": "e2fe14ef-c771-4a57-8951-2caf83e01b3b"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.status }}",
+                    "rightValue": "PENDIENTE",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "4452cb65-2a4f-4eb8-8dab-b8c4ba0a46bb"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "a618dd4a-c053-4e87-a592-e88a7f550376",
+                    "leftValue": "={{ $json.body.status }}",
+                    "rightValue": "CONFIRMADO",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "f590147a-f253-4906-880b-f5076458e466",
+                    "leftValue": "={{ $json.body.status }}",
+                    "rightValue": "ENVIADO",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "1817189f-3d76-4b4f-8942-c620fbca66f9",
+                    "leftValue": "={{ $json.body.status }}",
+                    "rightValue": "ENTREGADO",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "91f1c081-2213-447c-a1bc-45e1c6f91088",
+                    "leftValue": "={{ $json.body.status }}",
+                    "rightValue": "CANCELADO",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "=extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -112,
+        16
+      ],
+      "id": "03af7220-8112-43ae-95ef-b478291c03b2",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "jsCode": "const o = $input.first().json.body;\nconst items = o.items.map(i => `• ${i.name} (${i.variant}) × ${i.quantity}`).join('\\n');\n\n// Mensaje para el CLIENTE\nconst clientText = `<b>¡Pedido recibido! 🙌</b>\nGracias ${o.customer.name}, ya tenemos tu pedido <b>#${o.shortId}</b>\n\n${items}\n\n<b>Total:</b> $${o.totalAmount.toLocaleString('es-CO')}\n<b>Envío a:</b> ${o.customer.city}\n\n${o.paymentMethod === 'transferencia'   \n  ? '💳 Para confirmar tu pedido, realiza la transferencia y envíanos el comprobante aquí mismo 📎\\n\\n(En el siguiente mensaje te enviamos los datos bancarios)'  \n  : '📦 Tu pedido es <b>contraentrega</b>. Lo alistamos y te avisamos cuando salga con el transportador.'}  \n  \nVer tu pedido: ${o.trackingUrl}`;\n\n\n// Mensaje para el ADMIN  \nconst adminText = `📋 <b>NUEVO PEDIDO #${o.shortId}</b>  \n  \n👤 ${o.customer.name} — ${o.customer.phone}  \n📍 ${o.customer.city}  \n💰 $${o.totalAmount.toLocaleString('es-CO')} — ${o.paymentMethod}  \n  \n${items}`;  \n  \nreturn [{   \n  clientText,   \n  adminText, \n  text: adminText,\n  chatId: o.customer.phone,      // para Telegram (usa chatId numérico)  \n  clientPhone: o.customer.phone,  // para WhatsApp (número con código país)  \n  orderId: o.orderId,  \n  paymentMethod: o.paymentMethod  \n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        -48
+      ],
+      "id": "656d0966-883a-439f-9a0c-d25fdf71ea91",
+      "name": "Build PENDIENTE message"
+    },
+    {
+      "parameters": {
+        "jsCode": "const o = $input.first().json.body;\nconst text = `<b>Pedido confirmado ✅</b>\n\n${o.customer.name.split(' ')[0]}, estamos alistando tu pedido <b>#${o.shortId}</b> con todo el cariño 🌸\n\nTe aviso apenas salga con el transportador.\n\nSeguir pedido: ${o.trackingUrl}`;\nreturn [{ text, chatId: o.customer.phone, orderId: o.orderId }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        256
+      ],
+      "id": "3e5a1d84-c7ff-4fef-b5a1-c592c6b8a814",
+      "name": "Build CONFIRMADO message"
+    },
+    {
+      "parameters": {
+        "jsCode": "const o = $input.first().json.body;\nconst trackingInfo = o.trackingCode \n  ? `<b>Guía:</b> ${o.trackingCode}${o.trackingCarrier ? ` (${o.trackingCarrier})` : ''}\\n\\n` \n  : '';\n\nconst text = `<b>¡Tu pedido va en camino! 🚚</b>\n\n${o.customer.name.split(' ')[0]}, tu pedido <b>#${o.shortId}</b> salió hacia ${o.customer.city}.\n\n${trackingInfo}Llega entre 2 y 5 días hábiles. Si alguien responde por ti en la dirección, avísame para ajustarlo 🤝\n\nSeguir pedido: ${o.trackingUrl}`;\nreturn [{ text, chatId: o.customer.phone, orderId: o.orderId }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        416
+      ],
+      "id": "17993049-588f-468f-a255-f2eff853f1bc",
+      "name": "Build ENVIADO message"
+    },
+    {
+      "parameters": {
+        "jsCode": "const o = $input.first().json.body;\nconst text = `<b>¡Tu pedido fue entregado! 🎉</b>\n\nEspero que ames lo que te llegó, ${o.customer.name.split(' ')[0]} 💕\n\nSi tienes un momento, me encantaría saber qué te pareció. Tu opinión nos ayuda un montón 🙏\n\nY como detalle para tu próxima compra, te dejo este cupón:\n\n<b>EMA10</b> — 10% off en tu siguiente pedido ✨\n\nVálido por 30 días. Gracias por elegirnos 🌸`;\nreturn [{ text, chatId: o.customer.phone, orderId: o.orderId }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        592
+      ],
+      "id": "fa8dbde2-91f5-4d1d-870a-f9349c30f993",
+      "name": "Build ENTREGADO message"
+    },
+    {
+      "parameters": {
+        "jsCode": "const o = $input.first().json.body;\nconst text = `Hola ${o.customer.name.split(' ')[0]}, tu pedido <b>#${o.shortId}</b> fue cancelado.\n\nSi fue por error o quieres retomarlo, escríbeme y lo solucionamos 🙏`;\nreturn [{ text, chatId: o.customer.phone, orderId: o.orderId }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        784
+      ],
+      "id": "e0c9a6b3-c898-4442-91d1-555971eab402",
+      "name": "Build CANCELADO message"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO whatsapp_messages \n  (id, order_id, direction, to_phone, message_text, status, provider, sent_at, created_at)\nVALUES \n  (gen_random_uuid(),\n   '{{ $('Webhook').item.json.body.orderId }}',\n   'OUTBOUND',\n   '{{ $json.result.chat.id }}',\n   $${{ JSON.stringify($json.result.text) }}$$,\n   'SENT',\n   'WA_ME',\n   NOW(),\n   NOW());",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2176,
+        336
+      ],
+      "id": "18c762a1-eb67-4717-8cd7-80f61200594b",
+      "name": "Execute a SQL query",
+      "credentials": {
+        "postgres": {
+          "id": "EySpSzlb6GlZAPz8",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "=1519669425",
+        "text": "={{ $json.text }}",
+        "replyMarkup": "=none",
+        "forceReply": {},
+        "replyKeyboardOptions": {},
+        "replyKeyboardRemove": {},
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1456,
+        272
+      ],
+      "id": "ec65d079-f3bd-4964-9dd6-c2b81296ecc4",
+      "name": "Log message",
+      "webhookId": "ad9f74a7-b2d0-4ba8-bccb-a9657631a7d5",
+      "credentials": {
+        "telegramApi": {
+          "id": "8GoauLCUMAK9e6vI",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "1519669425",
+        "text": "={{ \n`📋 <b>${$('Webhook').item.json.body.status}</b> - Pedido #${$('Webhook').item.json.body.shortId}\n\n👤 ${$('Webhook').item.json.body.customer.name} - ${$('Webhook').item.json.body.customer.phone}\n\n📍 ${$('Webhook').item.json.body.customer.city}\n\n💰 $${$('Webhook').item.json.body.totalAmount.toLocaleString('es-CO')} (${ $('Webhook').item.json.body.paymentMethod})\n\n${$('Webhook').item.json.body.trackingCode ? `📦 Guía: ${$('Webhook').item.json.body.trackingCode}` : 'Sin Numero de Guía'}\n\nVer: ${$('Switch').item.json.body.trackingUrl}`\n}}",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1904,
+        160
+      ],
+      "id": "284783bf-0698-49d9-ab39-be8f21f2ecac",
+      "name": "Notify Admin",
+      "webhookId": "569f3b51-df32-480a-858a-3feea1da97fb",
+      "credentials": {
+        "telegramApi": {
+          "id": "8GoauLCUMAK9e6vI",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "1519669425",
+        "text": "={{ $json.clientText }}",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        480,
+        32
+      ],
+      "id": "cf584e9a-ede8-400b-b974-3bce87f52f6b",
+      "name": "Send to Client Telegram",
+      "webhookId": "4ced1f79-c9bd-4616-9803-df7b44246fd0",
+      "credentials": {
+        "telegramApi": {
+          "id": "8GoauLCUMAK9e6vI",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "sendPhoto",
+        "chatId": "1519669425",
+        "file": "https://res.cloudinary.com/dsfvyworw/image/upload/v1777504494/Gemini_Generated_Image_cucgv0cucgv0cucg_fdbukj.png",
+        "additionalFields": {
+          "caption": "Estos son nuestros datos bancarios 👆"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1312,
+        -416
+      ],
+      "id": "3465db1d-af6b-48e7-8a48-53fcc49d341e",
+      "name": "Send Payment Image Telegram",
+      "webhookId": "65e3636a-7df3-4c93-81bc-35f65169a316",
+      "credentials": {
+        "telegramApi": {
+          "id": "8GoauLCUMAK9e6vI",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{PHONE_NUMBER_ID}}/messages",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={  \n    \"messaging_product\": \"whatsapp\",  \n    \"to\": \"57{{ $json.clientPhone }}\",  \n    \"type\": \"text\",  \n    \"text\": { \"body\": \"{{ $json.clientText }}\" }  \n  }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        480,
+        -224
+      ],
+      "id": "8451dc35-bffa-4a21-b860-a36f72a84e48",
+      "name": "Send to Client WhatsApp",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{PHONE_NUMBER_ID}}/messages",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={  \n    \"messaging_product\": \"whatsapp\",  \n    \"to\": \"57{{ $json.clientPhone }}\",  \n    \"type\": \"image\",  \n    \"image\": {  \n      \"link\": \"https://TU_CDN/cuentas-bancarias.jpg\",  \n      \"caption\": \"Realiza tu transferencia y envíanos el comprobante 📎\"  \n    }  \n  }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1296,
+        -224
+      ],
+      "id": "83100fe6-af89-4b60-b748-cbd2cfda600c",
+      "name": "Send Payment Image WhatsApp",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "92ce2e65-5d80-47fe-912d-20a802e48c09",
+              "leftValue": "={{ $('Build PENDIENTE message').item.json.paymentMethod }}",
+              "rightValue": "transferencia",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        800,
+        -160
+      ],
+      "id": "1f3d5d43-b172-498f-a5ef-0bdccc060168",
+      "name": "If"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Build PENDIENTE message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build CONFIRMADO message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build ENVIADO message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build ENTREGADO message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build CANCELADO message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build PENDIENTE message": {
+      "main": [
+        [
+          {
+            "node": "Send to Client Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build CONFIRMADO message": {
+      "main": [
+        [
+          {
+            "node": "Log message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build ENVIADO message": {
+      "main": [
+        [
+          {
+            "node": "Log message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build ENTREGADO message": {
+      "main": [
+        [
+          {
+            "node": "Log message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build CANCELADO message": {
+      "main": [
+        [
+          {
+            "node": "Log message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log message": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Notify Admin",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send to Client Telegram": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Payment Image Telegram": {
+      "main": [
+        [
+          {
+            "node": "Notify Admin",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send to Client WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Payment Image WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Notify Admin",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send Payment Image Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Notify Admin",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify Admin": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "3c0636b1-4bf4-4c8d-abb1-aca889cc8be3",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d36980363ef5d551a35c36501606b20bebae04d995e5e81f2a3e48f9b153c24e"
+  },
+  "id": "0PKD1qNhlzCnwHab",
+  "tags": []
+}

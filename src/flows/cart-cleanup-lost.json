@@ -1,0 +1,72 @@
+{
+  "name": "cart-cleanup-lost",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "id": "91527bfb-3d98-4336-8715-63e82775d5d7",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE carts\nSET status = 'LOST', updated_at = NOW()\nWHERE recovery_step = 3\n  AND last_activity < NOW() - INTERVAL '96 hours'\n  AND status NOT IN ('RECOVERED', 'LOST');",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        208,
+        0
+      ],
+      "id": "7ecd6c9b-66c2-4a1f-8dca-96209609081d",
+      "name": "Execute a SQL query",
+      "credentials": {
+        "postgres": {
+          "id": "EySpSzlb6GlZAPz8",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "47485633-44fe-4689-bf8f-b3bd787564c9",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d36980363ef5d551a35c36501606b20bebae04d995e5e81f2a3e48f9b153c24e"
+  },
+  "id": "hNu5ApVwnqdfiNiP",
+  "tags": []
+}

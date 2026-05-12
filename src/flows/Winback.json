@@ -1,0 +1,253 @@
+{
+  "name": "Winback",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {}
+          ]
+        }
+      },
+      "name": "Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -240,
+        -240
+      ],
+      "id": "a1d2a785-a6eb-4549-899e-209be174d71d"
+    },
+    {
+      "parameters": {
+        "url": "http://host.docker.internal:3000/api/customers/segmented",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "type",
+              "value": "winback"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-n8n-token",
+              "value": "=25624e724c76f9e80260561e56623219b1f7285193d527a36c243d4ea4879c98"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Get Winback Targets",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -48,
+        -240
+      ],
+      "id": "20b491d7-66c6-4c6f-8d4b-3b7764a8fcd2"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "customers",
+        "options": {}
+      },
+      "name": "Split Customers",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        192,
+        -240
+      ],
+      "id": "d1632ce4-f3c5-49f5-985f-cbe97be20dab"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:3000/api/admin/coupons/generate",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-n8n-token",
+              "value": "=25624e724c76f9e80260561e56623219b1f7285193d527a36c243d4ea4879c98"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"campaign\": \"WINBACK\",\n  \"type\": \"PERCENT\",\n  \"value\": 20,\n  \"expiresInHours\": 168,\n  \"maxUses\": 1,\n  \"minAmount\": 70000\n}",
+        "options": {}
+      },
+      "name": "Generate Winback Coupon",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        400,
+        -240
+      ],
+      "id": "b590e81e-6f7b-4739-b024-8f032cd5d294"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama-3.3-70b-versatile\",\n  \"temperature\": 0.9,\n  \"messages\": [\n    {\"role\": \"system\", \"content\": \"Eres el asistente de Emanella, tienda premium de perfumes en Colombia. Escribes mensajes de reactivación emotivos y con urgencia real. Máximo 5 líneas. Máximo 2 emojis.\"},\n    {\"role\": \"user\", \"content\": \"Cliente {{ $('Split Customers').item.json.name }} no ha comprado en más de 90 días. Envíale un mensaje de 'te extrañamos' con cupón exclusivo {{ $json.coupon.code }} de 20% OFF válido solo 7 días. Cierra con: 'Volver a Emanella → https://emanella.com/catalogo?c={{ $json.coupon.code }}'\"}\n  ]\n}",
+        "options": {}
+      },
+      "name": "Groq Generate Message",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        624,
+        -240
+      ],
+      "id": "25f306b7-7120-47dc-8411-6c1cd947dff4",
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "G2YShd22smcAlQVr",
+          "name": "Bearer Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "=1519669425",
+        "text": "=💔 *Winback enviado*\n\n👤 {{ $('Split Customers').item.json.name }}\n📱 {{ $('Split Customers').item.json.phone }}\n🎟️ Cupón: {{ $('Generate Winback Coupon').item.json.coupon.code }} (20% OFF · 7 días)\n\n---\n{{ $json.choices[0].message.content }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "name": "Send Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        848,
+        -240
+      ],
+      "id": "94e0f5a0-9bd3-42a9-b898-8686ffc60733",
+      "webhookId": "f1fb6483-42ea-4a8e-a3c5-b6973770b253",
+      "credentials": {
+        "telegramApi": {
+          "id": "8GoauLCUMAK9e6vI",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://host.docker.internal:3000/api/customers/{{ $('Split Customers').item.json.id }}/mark-winback",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-n8n-token",
+              "value": "=25624e724c76f9e80260561e56623219b1f7285193d527a36c243d4ea4879c98"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Mark Winback Sent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1072,
+        -240
+      ],
+      "id": "65297794-ad1e-4f09-bced-ca4dc3053c93"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule": {
+      "main": [
+        [
+          {
+            "node": "Get Winback Targets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Winback Targets": {
+      "main": [
+        [
+          {
+            "node": "Split Customers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Customers": {
+      "main": [
+        [
+          {
+            "node": "Generate Winback Coupon",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Winback Coupon": {
+      "main": [
+        [
+          {
+            "node": "Groq Generate Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Generate Message": {
+      "main": [
+        [
+          {
+            "node": "Send Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Telegram": {
+      "main": [
+        [
+          {
+            "node": "Mark Winback Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "a528d53e-8313-4694-be42-a1765ce88fa3",
+  "meta": {
+    "instanceId": "d36980363ef5d551a35c36501606b20bebae04d995e5e81f2a3e48f9b153c24e"
+  },
+  "id": "wgv0630kHUErMbty",
+  "tags": []
+}

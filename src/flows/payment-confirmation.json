@@ -1,0 +1,571 @@
+{
+  "name": "payment-confirmation",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message",
+          "callback_query"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -352,
+        -48
+      ],
+      "id": "5e241858-0e3c-4422-8d51-5df23c46b4b9",
+      "name": "Telegram Trigger",
+      "webhookId": "922d84e7-4bb2-448b-ab0e-77366db8af41",
+      "credentials": {
+        "telegramApi": {
+          "id": "8GoauLCUMAK9e6vI",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "521ce5ba-56c2-481f-ab2a-7002b12ec022",
+              "leftValue": "={{ $json.message.photo }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "array",
+                "operation": "lengthGt",
+                "rightType": "number"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        96,
+        -288
+      ],
+      "id": "ff64075c-f035-41a5-9e2e-d13dce5ec0c5",
+      "name": "If Image?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT o.id, o.\"total_amount\", o.\"payment_method\",\n       c.name as customer_name, c.phone\nFROM \"orders\" o\nJOIN \"customers\" c ON c.id = o.\"customer_id\"\nWHERE c.phone = $1\n  AND o.status = 'PENDIENTE'\n  AND o.\"payment_method\" = 'transferencia'\nORDER BY o.\"created_at\" DESC\nLIMIT 1;",
+        "options": {
+          "queryReplacement": "={{ $('Extract message data').item.json.phone }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        512,
+        -384
+      ],
+      "id": "4b323c8c-97a5-4de9-940a-3b3b929532c8",
+      "name": "Find Pending Order",
+      "credentials": {
+        "postgres": {
+          "id": "EySpSzlb6GlZAPz8",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "0534fe86-c131-4b83-84df-f26a320f0be5",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        880,
+        -384
+      ],
+      "id": "f9fe3f58-c3e6-49c4-a8da-a6ce425b6232",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "jsCode": "const msg = $input.first().json.message;\nconst phone = msg.from.id.toString(); // en pruebas = tu chatId\nconst fileId = msg.photo[msg.photo.length - 1].file_id; // mayor resolución\nconst chatId = msg.chat.id;\n\nreturn [{ phone, fileId, chatId, fromId: msg.from.id }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        304,
+        -384
+      ],
+      "id": "79e5b54a-8e7e-4732-8270-a524755c4f42",
+      "name": "Extract message data"
+    },
+    {
+      "parameters": {
+        "operation": "sendPhoto",
+        "chatId": "1519669425",
+        "file": "={{ $('Extract message data').item.json.fileId }}",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "✅ Confirmar",
+                    "additionalFields": {
+                      "callback_data": "={{ `CONFIRM_${$json.id}` }}"
+                    }
+                  },
+                  {
+                    "text": "❌ Rechazar",
+                    "additionalFields": {
+                      "callback_data": "={{ `REJECT_${$json.id}` }}"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "caption": "={{ `🧾 Comprobante recibido\\n\\n👤 ${$json.customer_name}\\n📦 Pedido #${$json.shortId}\\n💰 $${Number($json.total_amount).toLocaleString('es-CO')}\\n\\nID: ${$json.id}` }}"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1136,
+        -560
+      ],
+      "id": "b77b846f-6bfd-4049-9675-35ab119faaff",
+      "name": "Notify Admin",
+      "webhookId": "6c1a3b10-1f14-4b95-9afc-c5b50eabd0cd",
+      "credentials": {
+        "telegramApi": {
+          "id": "8GoauLCUMAK9e6vI",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "1519669425",
+        "text": "✅ Recibimos tu comprobante. Lo estamos revisando y te confirmamos en breve 🙏",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1344,
+        -560
+      ],
+      "id": "0e7d04f2-4915-4a49-abc9-37ce1ba92cea",
+      "name": "Answer Client",
+      "webhookId": "15746b19-a5dc-4686-a98a-bd974082d540",
+      "credentials": {
+        "telegramApi": {
+          "id": "8GoauLCUMAK9e6vI",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const shortId =$input.first().json.id.slice(0, 8).toUpperCase()\nconst id = $input.first().json.id\nconst total_amount = $input.first().json.total_amount\nconst payment_method = $input.first().json.payment_method\nconst customer_name = $input.first().json.customer_name\nconst phone = $input.first().json.phone\n\nreturn {\n  shortId, id, total_amount, payment_method, customer_name, phone\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        -384
+      ],
+      "id": "99468cdd-c0e6-4937-bdc9-a95596ed4c80",
+      "name": "Transform Data"
+    },
+    {
+      "parameters": {
+        "jsCode": "const cb = $input.first().json.callback_query;\nconst data = cb.data; // 'CONFIRM_uuid' o 'REJECT_uuid'\nconst [action, orderId] = data.split('_').reduce((acc, part, i) => {\n  if (i === 0) acc[0] = part;  else acc[1] = (acc[1] ? acc[1] + '_' + part : part);\n  return acc;}, ['', '']);\n\nconst adminChatId = cb.message.chat.id;\nconst messageId = cb.message.message_id;\n\nreturn [{ action, orderId, adminChatId, messageId }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        80,
+        -48
+      ],
+      "id": "549dff1f-d66b-4197-862e-5bb6bc83895f",
+      "name": "Parse Callback"
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=http://host.docker.internal:3000/api/orders/{{ $json.orderId }}/status",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-n8n-token",
+              "value": "25624e724c76f9e80260561e56623219b1f7285193d527a36c243d4ea4879c98"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{ \"status\": \"CANCELADO\" }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        512,
+        48
+      ],
+      "id": "ef291b5f-387d-4092-a9da-db3e85f2ddf8",
+      "name": "Update Order CANCELADO"
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=http://host.docker.internal:3000/api/orders/{{ $json.orderId }}/status",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-n8n-token",
+              "value": "25624e724c76f9e80260561e56623219b1f7285193d527a36c243d4ea4879c98"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{ \"status\": \"CONFIRMADO\" }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        512,
+        -160
+      ],
+      "id": "aaf6d3da-17d4-4537-9cf0-13c72f3f4b80",
+      "name": "Update Order CONFIRMADO"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.message.photo }}",
+                    "rightValue": 0,
+                    "operator": {
+                      "type": "array",
+                      "operation": "lengthGt",
+                      "rightType": "number"
+                    },
+                    "id": "8f3ae87f-3574-43e0-9e58-e96acd0eb3b7"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "c0572308-9af0-4c6f-8f52-350b38c4b79e",
+                    "leftValue": "{{$json.callback_query}}",
+                    "rightValue": "undefined",
+                    "operator": {
+                      "type": "string",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "72f57d72-8598-4df2-b2db-453e549ff3ce",
+                    "leftValue": "{{json.message.text}}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -144,
+        -64
+      ],
+      "id": "42ff2f6a-f11d-4e31-8fc3-72ca019e35ef",
+      "name": "Switch Type"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "CONFIRM",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "89be86f4-b27a-45ec-bbaa-07c0366af7d2"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "5b1af871-4d66-4944-a170-335886ac110e",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "REJECT",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        304,
+        -48
+      ],
+      "id": "477943f0-74a6-444d-b69d-478431033e76",
+      "name": "Switch CONFIRM/REJECT"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Switch Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Image?": {
+      "main": [
+        [
+          {
+            "node": "Extract message data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Pending Order": {
+      "main": [
+        [
+          {
+            "node": "Transform Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Notify Admin",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract message data": {
+      "main": [
+        [
+          {
+            "node": "Find Pending Order",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify Admin": {
+      "main": [
+        [
+          {
+            "node": "Answer Client",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transform Data": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Callback": {
+      "main": [
+        [
+          {
+            "node": "Switch CONFIRM/REJECT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch Type": {
+      "main": [
+        [
+          {
+            "node": "If Image?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Parse Callback",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Switch CONFIRM/REJECT": {
+      "main": [
+        [
+          {
+            "node": "Update Order CONFIRMADO",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update Order CANCELADO",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "32142bab-59aa-44a0-96dc-327cd052ca1f",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d36980363ef5d551a35c36501606b20bebae04d995e5e81f2a3e48f9b153c24e"
+  },
+  "id": "iKHEbfINqpvTFI3E",
+  "tags": []
+}

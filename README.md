@@ -1,36 +1,94 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Emanella Store Web
 
-## Getting Started
+Aplicación e-commerce de Emanella construida con Next.js App Router, Prisma y automatizaciones comerciales con n8n.
 
-First, run the development server:
+## Estado actual
+
+El proyecto ya cubre el flujo completo de venta y postventa:
+
+- tienda pública (`/`, `/catalogo`, `/producto/[slug]`);
+- carrito persistido (Zustand + backend);
+- checkout con cupones y creación de pedidos;
+- panel admin para pedidos y productos;
+- automatizaciones de lifecycle y retención con n8n;
+- chatbot IA para asistencia en Telegram.
+
+Documento técnico extendido: `ESTADO_ACTUAL_PROYECTO.md`.
+
+## Stack
+
+- Next.js `16.2.1` (App Router) + React `19`
+- TypeScript (strict)
+- Prisma + PostgreSQL
+- Tailwind CSS v4 (`@tailwindcss/postcss`)
+- Zustand (persistencia de carrito)
+- Cloudinary (imágenes)
+- `jose` para sesiones JWT
+
+## Comandos
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run build
+npm run start
+npm run lint
+
+npx prisma generate
+npx prisma db push
+npx prisma db seed
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Variables de entorno clave
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```env
+DATABASE_URL=
+DIRECT_URL=
+JWT_SECRET=
+N8N_SECRET=
+N8N_WEBHOOK_URL=
+N8N_SHIPPING_WEBHOOK_URL=
+NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Arquitectura resumida
 
-## Learn More
+- `src/app/**`: páginas App Router y route handlers.
+- `src/app/api/**`: capa HTTP (sin lógica de negocio pesada).
+- `src/services/**`: lógica de negocio (productos, pedidos, checkout, auth).
+- `src/lib/**`: utilidades, sesión, DB, validadores.
+- `src/store/**`: estado cliente (carrito).
+- `src/components/shop/**` y `src/components/admin/**`: UI por dominio.
+- `src/flows/**`: flujos n8n versionados.
 
-To learn more about Next.js, take a look at the following resources:
+## Flujos n8n versionados
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Ubicación: `src/flows`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Incluye automatizaciones para:
 
-## Deploy on Vercel
+- recuperación de carrito (`step 1`, `step 2`, `step 3`, cleanup `LOST`);
+- notificaciones de lifecycle de pedido;
+- campañas de marketing (`Welcome`, `Review Request`, `Repurchase`, `Winback`);
+- chatbot IA en Telegram con búsqueda de productos y escalación a humano.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Seguridad y operación
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Auth basada en cookie `session_token` firmada con JWT.
+- Middleware protege `/admin/*` y `/api/admin/*`.
+- Integraciones automatizadas pueden autenticarse por header `x-n8n-token` (`N8N_SECRET`).
+- No subir secretos reales en archivos JSON de flujos o semillas de datos.
+
+## Estructura principal
+
+```text
+src/
+  app/
+  components/
+  services/
+  lib/
+  store/
+  flows/
+prisma/
+```

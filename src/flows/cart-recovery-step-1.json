@@ -1,0 +1,368 @@
+{
+  "name": "cart-recovery-step-1",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "id": "12848bf7-258f-4759-a92e-0e4c25556459",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1696,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:3000/api/cart/abandoned?step=1",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-n8n-token",
+              "value": "25624e724c76f9e80260561e56623219b1f7285193d527a36c243d4ea4879c98"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "985f93c7-2791-4d6d-a3dc-e0907e403fdd",
+      "name": "Get Abandoned Carts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        -1488,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.isNotEmpty() }}",
+              "operation": "larger"
+            }
+          ]
+        }
+      },
+      "id": "fe2db4cf-239b-4333-901b-f7639718ac08",
+      "name": "Has Carts?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -1296,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "a63f66f3-e9c9-4302-bab7-aaa714b3b6d9",
+      "name": "Split In Batches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 2,
+      "position": [
+        -1088,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "const cart = $json;\nconst items = cart.items || [];\n\nconst enriched = items.map(i => ({\n  variantId: i.variantId,\n  name: i.variant?.product?.name || 'producto',\n  price: Number(i.unitPrice),\n  quantity: i.quantity,\n  imageUrl: i.variant?.product?.images?.[0]?.imageUrl || null,\n}));\n\nconst topProduct = enriched.sort((a, b) => b.price - a.price)[0] \n  || { name: 'producto seleccionado', price: 0 };\n\n// Nombre del cliente (si existe)\nconst customerName = cart.customer?.name || null;\n\n// Link de checkout que restaura el carrito\nconst checkoutUrl = `http://localhost:3000/checkout?cart=${cart.sessionId}`;\n\nreturn [{\n  cartId: cart.id,\n  sessionId: cart.sessionId,\n  customerId: cart.customerId,\n  phone: cart.phone,\n  name: customerName,\n  total: Number(cart.totalAmount),\n  items: enriched,\n  topProduct,\n  checkoutUrl,\n  step: 1,\n}];"
+      },
+      "id": "c37f30e6-4182-4732-a031-a9d3aa6203c8",
+      "name": "Get Top Product",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        -896,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama-3.3-70b-versatile\",\n  \"temperature\": 0.7,\n  \"max_tokens\": 120,\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Eres el asistente de ventas de Emanella Store, una tienda de perfumes, bolsos y accesorios. Tu tono es cálido, cercano, NUNCA insistente.\\n\\nTu tarea es escribir UN mensaje corto (máx 3 líneas + emoji moderado) para recuperar un carrito abandonado.\\n\\nReglas:\\n- Saluda por el nombre si existe, sino usa \\\"Hola 👋\\\"\\n- Menciona 1 producto específico del carrito (el de mayor precio)\\n- NO uses palabras como \\\"urgente\\\", \\\"última oportunidad\\\"\\n- Termina con pregunta abierta o link directo\\n- Idioma: español natural colombiano\\n\\nDevuelve SOLO el mensaje, sin comillas ni explicaciones.\\n\\nInstrucción según paso:\\n- Paso 1 (1h después): tono \\\"oye, se te olvidó algo 👀\\\"\\n- Paso 2 (24h después): tono empático \\\"¿tuviste alguna duda?, sigue disponible\\\"\\n- Paso 3 (72h después): último toque con cupón \\\"usa EMA10 para 10% off\\\"\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Cliente: {{ $json.name || 'Cliente' }}\\nProducto: {{ $json.topProduct.name }}\\nLink: {{ $json.checkoutUrl }}\\nPaso: {{ $json.step }}\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "f961b28b-237a-48fe-a93f-7d17b45470e7",
+      "name": "Groq AI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        -688,
+        160
+      ],
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "G2YShd22smcAlQVr",
+          "name": "Bearer Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.choices[0].message.content }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "a5f8d6ed-9853-4d84-9842-e257e46f62b8",
+      "name": "AI OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -496,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.ycloud.com/v2/whatsapp/messages",
+        "options": {}
+      },
+      "id": "3cd25716-a349-4f58-8b06-dbb1e31532fc",
+      "name": "Send WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        -80,
+        160
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:3000/api/cart/mark-recovering",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-n8n-token",
+              "value": "25624e724c76f9e80260561e56623219b1f7285193d527a36c243d4ea4879c98"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"cartId\": \"{{ $('Get Top Product').item.json.cartId }}\",\n  \"step\": 1\n}",
+        "options": {}
+      },
+      "id": "e3394b73-33c5-4dfc-b782-05c5c3c2f43a",
+      "name": "Mark Recovering",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        112,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "1519669425",
+        "text": "={{$('AI OK?').item.json.choices[0].message.content || $json.message }}",
+        "replyMarkup": "=",
+        "forceReply": {},
+        "replyKeyboardOptions": {},
+        "replyKeyboardRemove": {},
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -96,
+        -48
+      ],
+      "id": "10feebd3-60b5-459e-b109-22c799cebc3f",
+      "name": "Send a text message",
+      "webhookId": "e1bcee78-fe9d-4ad7-bd33-2e831fb8b53d",
+      "credentials": {
+        "telegramApi": {
+          "id": "8GoauLCUMAK9e6vI",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "return [{ message: `Hola 👋 vimos que dejaste algo en tu carrito. ¿Te ayudo a finalizar tu compra? 🛍️` }]; "
+      },
+      "id": "c7a32348-666b-4192-8592-4d5157e314d0",
+      "name": "Fallback Message",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        -272,
+        80
+      ],
+      "notesInFlow": false,
+      "retryOnFail": false,
+      "alwaysOutputData": false
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Abandoned Carts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Abandoned Carts": {
+      "main": [
+        [
+          {
+            "node": "Has Carts?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Carts?": {
+      "main": [
+        [
+          {
+            "node": "Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split In Batches": {
+      "main": [
+        [
+          {
+            "node": "Get Top Product",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Top Product": {
+      "main": [
+        [
+          {
+            "node": "Groq AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq AI": {
+      "main": [
+        [
+          {
+            "node": "AI OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI OK?": {
+      "main": [
+        [
+          {
+            "node": "Fallback Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Mark Recovering",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a text message": {
+      "main": [
+        [
+          {
+            "node": "Mark Recovering",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fallback Message": {
+      "main": [
+        [
+          {
+            "node": "Send WhatsApp",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "fc8163d8-f74e-4769-9751-56b8dc7b0ff4",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d36980363ef5d551a35c36501606b20bebae04d995e5e81f2a3e48f9b153c24e"
+  },
+  "id": "eLAhyjGoaUi6OiL8",
+  "tags": []
+}

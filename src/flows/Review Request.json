@@ -1,0 +1,259 @@
+{
+  "name": "Review Request",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "name": "Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -32,
+        -128
+      ],
+      "id": "52100d5a-bb36-42f9-a5d3-22c38f60c0b5"
+    },
+    {
+      "parameters": {
+        "url": "http://host.docker.internal:3000/api/customers/segmented",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "type",
+              "value": "review-pending"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-n8n-token",
+              "value": "=25624e724c76f9e80260561e56623219b1f7285193d527a36c243d4ea4879c98"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Get Review Targets",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        176,
+        -128
+      ],
+      "id": "0cf7553b-91ca-4d3b-8cd1-17aac5bb8a5c"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "orders",
+        "options": {}
+      },
+      "name": "Split Orders",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        400,
+        -128
+      ],
+      "id": "b1e185bd-aab6-44d1-917c-b7f9f5e1aceb"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:3000/api/admin/coupons/generate",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-n8n-token",
+              "value": "=25624e724c76f9e80260561e56623219b1f7285193d527a36c243d4ea4879c98"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"campaign\": \"REVIEW\",\n  \"type\": \"PERCENT\",\n  \"value\": 15,\n  \"expiresInHours\": 720,\n  \"maxUses\": 1,\n  \"minAmount\": 80000\n}",
+        "options": {}
+      },
+      "name": "Generate Review Coupon",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        608,
+        -128
+      ],
+      "id": "594e3cf8-f0e6-4dd6-b523-968dc65649f6"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama-3.3-70b-versatile\",\n  \"temperature\": 0.7,\n  \"messages\": [\n    {\"role\": \"system\", \"content\": \"Eres el asistente de Emanella, tienda premium de perfumes en Colombia. Escribes mensajes cálidos y elegantes. Máximo 5 líneas. Máximo 2 emojis.\"},\n    {\"role\": \"user\", \"content\": \"Cliente {{ $('Split Orders').item.json.customer.name }} recibió su pedido hace 3 días. Pídele una reseña con mucho cariño. Menciona que si comparte una foto gana 15% OFF con cupón. Link de reseña, no agregues punto final, después del link: https://emanella.com/resena/{{ $('Split Orders').item.json.id }}?c={{ $('Split Orders').item.json.customer.id }}\"}\n  ]\n}",
+        "options": {}
+      },
+      "name": "Groq Generate Message",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        832,
+        -128
+      ],
+      "id": "40cc6a3c-bcd2-438e-b6bf-4d3cd2466869",
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "G2YShd22smcAlQVr",
+          "name": "Bearer Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "=1519669425",
+        "text": "=⭐ *Solicitud de reseña enviada*\n\n👤 {{ $('Split Orders').item.json.customer.name }}\n📱 {{ $('Split Orders').item.json.customer.phone }}\n\n\n---\n{{ $json.choices[0].message.content }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "name": "Send Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1056,
+        -128
+      ],
+      "id": "a096350a-dff0-4f03-9d82-afdbaf947576",
+      "webhookId": "74a6f00b-1b2e-4768-913a-e592ec3de321",
+      "credentials": {
+        "telegramApi": {
+          "id": "8GoauLCUMAK9e6vI",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://host.docker.internal:3000/api/orders/{{ $('Split Orders').item.json.id }}/mark-review-requested",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-n8n-token",
+              "value": "=25624e724c76f9e80260561e56623219b1f7285193d527a36c243d4ea4879c98"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"couponCode\": \"{{ $('Generate Review Coupon').item.json.coupon.code }}\"\n}",
+        "options": {}
+      },
+      "name": "Mark Review Requested",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1280,
+        -128
+      ],
+      "id": "04ba380a-0c29-40f0-a907-6cbc59511f10"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule": {
+      "main": [
+        [
+          {
+            "node": "Get Review Targets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Review Targets": {
+      "main": [
+        [
+          {
+            "node": "Split Orders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Orders": {
+      "main": [
+        [
+          {
+            "node": "Generate Review Coupon",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Review Coupon": {
+      "main": [
+        [
+          {
+            "node": "Groq Generate Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Generate Message": {
+      "main": [
+        [
+          {
+            "node": "Send Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Telegram": {
+      "main": [
+        [
+          {
+            "node": "Mark Review Requested",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "810c4377-b2c4-4f49-a446-2ac3f0355214",
+  "meta": {
+    "instanceId": "d36980363ef5d551a35c36501606b20bebae04d995e5e81f2a3e48f9b153c24e"
+  },
+  "id": "uvARjXbzUgSxP2fv",
+  "tags": []
+}

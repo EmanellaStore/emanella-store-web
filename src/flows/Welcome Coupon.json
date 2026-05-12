@@ -1,0 +1,257 @@
+{
+  "name": "Welcome Coupon",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "name": "Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -192,
+        32
+      ],
+      "id": "75c27339-6778-4265-ad49-c13bec97871f"
+    },
+    {
+      "parameters": {
+        "url": "http://host.docker.internal:3000/api/customers/segmented",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "type",
+              "value": "welcome"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-n8n-token",
+              "value": "=25624e724c76f9e80260561e56623219b1f7285193d527a36c243d4ea4879c98"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Get Welcome Targets",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        32,
+        32
+      ],
+      "id": "1179a312-5f3b-434e-b868-e7219249be06"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "customers",
+        "options": {}
+      },
+      "name": "Split Customers",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        256,
+        32
+      ],
+      "id": "ce8a9e8f-d8dd-437f-8978-505769c94572"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:3000/api/admin/coupons/generate",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-n8n-token",
+              "value": "=25624e724c76f9e80260561e56623219b1f7285193d527a36c243d4ea4879c98"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"customerId\": \"{{$json.id}}\",\n  \"campaign\": \"WELCOME\",\n  \"type\": \"PERCENT\",\n  \"value\": 10,\n  \"expiresInHours\": 24,\n  \"maxUses\": 1,\n  \"minAmount\": 50000\n}",
+        "options": {}
+      },
+      "name": "Generate Coupon",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        32
+      ],
+      "id": "545a8127-5ffe-4693-9865-e02a5014a860"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama-3.3-70b-versatile\",\n  \"temperature\": 0.7,\n  \"messages\": [\n    {\"role\": \"system\", \"content\": \"Eres el asistente de Emanella, una tienda premium de perfumes y accesorios en Colombia. Escribes mensajes de bienvenida cálidos y elegantes. Máximo 4 líneas. Usa máximo 2 emojis sutiles.\"},\n    {\"role\": \"user\", \"content\": \"Cliente: {{ $('Split Customers').item.json.name }}. Envía bienvenida y comunica el cupón {{ $json.coupon.code }} con 10% OFF válido 24h, mínimo $50.000. Cierra con: 'Ver catálogo → https://emanella.com/c?c={{ $json.coupon.code }}'\"}\n  ]\n}",
+        "options": {}
+      },
+      "name": "Groq Generate Message",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        688,
+        32
+      ],
+      "id": "980c236d-b68a-43d4-afd9-27d6caa8db08",
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "G2YShd22smcAlQVr",
+          "name": "Bearer Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "=1519669425",
+        "text": "=🎁 *Nuevo cliente bienvenido*\n\n👤 {{ $('Split Customers').item.json.name }}\n📱 {{ $('Split Customers').item.json.phone }}\n🎟️ Cupón: {{ $('Generate Coupon').item.json.coupon.code }}\n\n---\n{{ $json.choices[0].message.content }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "name": "Send Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        912,
+        32
+      ],
+      "id": "729a96c7-0f02-407b-a505-41833a7ff18e",
+      "webhookId": "0c14e7d9-99a9-4d16-9366-8eced4abf6cc",
+      "credentials": {
+        "telegramApi": {
+          "id": "8GoauLCUMAK9e6vI",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://host.docker.internal:3000/api/customers/{{ $('Split Customers').item.json.id }}/mark-welcomed",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-n8n-token",
+              "value": "=25624e724c76f9e80260561e56623219b1f7285193d527a36c243d4ea4879c98"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Mark Welcomed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1136,
+        32
+      ],
+      "id": "ac3dbb9e-3942-41bb-aa00-e96ba12ff2da"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule": {
+      "main": [
+        [
+          {
+            "node": "Get Welcome Targets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Welcome Targets": {
+      "main": [
+        [
+          {
+            "node": "Split Customers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Customers": {
+      "main": [
+        [
+          {
+            "node": "Generate Coupon",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Coupon": {
+      "main": [
+        [
+          {
+            "node": "Groq Generate Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Generate Message": {
+      "main": [
+        [
+          {
+            "node": "Send Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Telegram": {
+      "main": [
+        [
+          {
+            "node": "Mark Welcomed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "24f0e625-9dab-4a03-8e07-4bae332a8f3d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d36980363ef5d551a35c36501606b20bebae04d995e5e81f2a3e48f9b153c24e"
+  },
+  "id": "hTraj2GYjgMczZkW",
+  "tags": []
+}

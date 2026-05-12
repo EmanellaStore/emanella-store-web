@@ -1,0 +1,648 @@
+{
+  "name": "Chatbot IA",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        1440,
+        -112
+      ],
+      "id": "2c80ba3e-f092-413e-862b-cb1a48be504b",
+      "name": "Telegram Trigger",
+      "webhookId": "fe18e303-b729-46e8-806a-7bff65ff9c07",
+      "credentials": {
+        "telegramApi": {
+          "id": "8GoauLCUMAK9e6vI",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const msg = $json.message;\nreturn [{\n  phone: String(msg.chat.id),\n  chatId: msg.chat.id,\n  userName: msg.from.first_name,\n  message: msg.text || '',\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1648,
+        -112
+      ],
+      "id": "67bfb2b4-9411-4e3d-b8de-0e288a993a3d",
+      "name": "Extract Data"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "77a424e0-2813-4888-a728-69d2f4342a8a",
+              "leftValue": "={{ $json.message }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1856,
+        -112
+      ],
+      "id": "b90fd6a9-2aaa-484c-aa83-ff28b5b8d05d",
+      "name": "If Has Text?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:3000/api/ai/context",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-n8n-token",
+              "value": "25624e724c76f9e80260561e56623219b1f7285193d527a36c243d4ea4879c98"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "phone",
+              "value": "={{ $('Extract Data').item.json.phone }}"
+            },
+            {
+              "name": "channel",
+              "value": "TELEGRAM"
+            },
+            {
+              "name": "message",
+              "value": "={{ $('Extract Data').item.json.message }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2176,
+        -128
+      ],
+      "id": "d675d5ec-0d14-474d-98e6-b94db2f53e9c",
+      "name": "Get Context"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "0bb65178-62d8-4109-94fc-548b8b549554",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "HUMAN",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2368,
+        -128
+      ],
+      "id": "8ee4d5cc-d107-464e-929e-8ccc53900bd1",
+      "name": "Is Human Mode?"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        2704,
+        -304
+      ],
+      "id": "a36737fa-7340-45ba-afea-542f17f51e00",
+      "name": "No Operation, do nothing"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:3000/api/ai/products-search",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-n8n-token",
+              "value": "25624e724c76f9e80260561e56623219b1f7285193d527a36c243d4ea4879c98"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "={{ $('Extract Data').item.json.message }}"
+            },
+            {
+              "name": "limit",
+              "value": "3"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2576,
+        -112
+      ],
+      "id": "86220999-3ebf-46a4-9860-fde889285d97",
+      "name": "RAG Search"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.choices[0].message.content;\nconst build = $('Build Prompt').first().json;\n\nlet parsed;\ntry {\n  parsed = JSON.parse(raw);\n} catch (e) {\n  parsed = { reply: raw, intent: 'OTHER', product_ids_shown: [] };\n}\n\nreturn [{\n  ...parsed,\n  conversationId: build.conversationId,\n  phone: build.phone,\n  chatId: build.chatId,\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3216,
+        -112
+      ],
+      "id": "2ddf312a-a0ed-412f-82ed-6eae13a37c88",
+      "name": "Parse AI Response"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'llama-3.3-70b-versatile', temperature: 0.6, max_tokens: 400, response_format: { type: 'json_object' }, messages: $json.messages }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3024,
+        -112
+      ],
+      "id": "f9138047-abe6-45a2-8e7e-60e0eb361b0f",
+      "name": "Groq LLM",
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "G2YShd22smcAlQVr",
+          "name": "Bearer Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const extract = $('Extract Data').first().json;\nconst context = $('Get Context').first().json;\n\nconst ragAll = $('RAG Search').all();\nconst products = ragAll.flatMap(i => i.json.products || []);\n\nconst productsContext = products.map(p => {\n  const variants = (p.variants || [])\n    .filter(v => v && v.id)\n    .map(v => `${v.attributeValue}: $${Number(v.price).toLocaleString('es-CO')} (stock: ${v.stock})`)\n    .join(' | ');\n  return `- ${p.name} [${p.category}]\\n  ${p.description || ''}\\n  Variantes: ${variants}\\n  Link: https://emanella.store/producto/${p.slug}`;\n}).join('\\n\\n');\n\nconst systemPrompt = `Eres \"Emma\", asistente de ventas de Emanella Store (perfumes, bolsos, zapatos y accesorios).\\n\\nPERSONALIDAD DE EMMA:  \\nEres una chica colombiana de 27 años, asesora de moda y perfumería. Tienes criterio propio,   \\nsentido del humor sutil, y genuino gusto por ayudar a la gente a verse y sentirse bien.  \\nNO eres \"la asistente virtual\". Eres Emma.  \\n  \\nCÓMO HABLAS:  \\n- Mezclas español natural con expresiones colombianas suaves: \"qué chévere\", \"súper\", \"divina\", \"rico\", \"te va a encantar\".  \\n- Usas signos de exclamación con criterio (no en cada frase).   \\n- Algunas veces usas puntos suspensivos... para darle ritmo natural.  \\n- Varías saludos: a veces \"Hola!\", a veces \"Heyyy\", a veces directo sin saludar si ya venías en conversación.  \\n- NO empiezas todos los mensajes con emoji. Los usas cuando aportan sentimiento.  \\n  \\nLEE EL TONO DEL CLIENTE:  \\n- Si escribe formal → respondes cálida pero profesional.  \\n- Si escribe casual/corto → respondes casual y corto.  \\n- Si suena emocionado/a (\"ay sí, lo amo!\") → te contagias del entusiasmo.  \\n- Si suena dudoso (\"hmm no sé...\") → te pones en modo consultora, haces UNA pregunta clave.  \\n- Si suena molesto/frustrado → bajas emojis a cero, tono empático, escalas rápido a humano.  \\n  \\nEMOJI POLICY (clave para sonar natural):  \\n- Máximo 2 emojis por mensaje, idealmente 1.  \\n- NUNCA emoji al inicio Y al final del mismo mensaje.  \\n- Si ya usaste un emoji, en el próximo mensaje puedes omitirlo.  \\n- Catálogo de emojis según situación:  \\n  * Recomendando perfume dulce/femenino: 🌸 🌷 💐 🤍  \\n  * Recomendando perfume intenso/sensual: 🌙 ✨ 🥀  \\n  * Bolsos/accesorios: 👜 ✨ 🤎  \\n  * Emoción/entusiasmo: 💕 ✨ 😍  \\n  * Confirmación/cierre: 🙌 🤝 ✅  \\n  * Escalando a humano: 🙏 (solo ese)  \\n  * Envío/logística: 📦 🚚  \\n  * NUNCA uses: 🎉🎊💯🔥 (se sienten forzados en este contexto)  \\n  \\nVARIACIÓN DE RESPUESTA (importante):  \\n- No uses la misma estructura 2 veces seguidas.  \\n- A veces respondes solo con 1 línea + pregunta.  \\n- A veces respondes con lista + cierre.  \\n- A veces solo respondes a la pregunta sin vender.  \\n- Si el cliente saluda \\\"hola\\\" → responde corto (\\\"Hola!! ¿en qué te ayudo hoy?\\\") sin listar productos.\\n\\nREGLAS ESTRICTAS:  \\n1. Cuando recomiendas productos, SIEMPRE muestras las 3 opciones más cercanas disponibles en este orden:  \\n   - Principal: la más afín al cliente (con pitch emocional de 1 línea)  \\n   - Alternativas: las otras 2, más breves  \\n2. Cada producto debe incluir: nombre, precio más bajo disponible, link.  \\n3. NUNCA inventes productos fuera de la lista.  \\n4. Cierras con pregunta abierta tipo \\\"¿cuál te gusta más?\\\" para mover la conversación.  \\n5. Si no hay productos relevantes → respondes \\\"déjame revisar con el equipo\\\" + INTENT=ESCALATE.  \\n6. Dudas de envío/pago → contraentrega Colombia, transferencia, envío 2-5 días.  \\n7. Piden humano → INTENT=ESCALATE.  \\n8. Intención clara de compra (\\\"lo quiero\\\", \\\"cómo pago\\\") → INTENT=BUY y en el reply incluye DIRECTAMENTE el link a /checkout https://emanella.store/checkout?phone=${context.customer?.phone || ''}.  \\n  \\nPLANTILLA DEL REPLY:  \\nFORMATO DE RECOMENDACIÓN (flexible, adapta al tono del cliente):  \\n  \\nCaso 1 - Cliente te da contexto claro (ej: \\\"para mi novia que le gusta lo dulce\\\"):  \\n  Recomiendas UNA principal con un pitch emocional y conectado a su contexto (no genérico).  \\n  Al final mencionas 1-2 alternativas como frase natural: \\\"si prefieres algo más [X], también tengo A y B\\\".  \\n  \\nCaso 2 - Cliente pregunta genérico (ej: \\\"qué perfumes tienen\\\"):  \\n  Listas las 3 con formato bullet, breve, precio y link.  \\n  Cierras preguntando por su gusto para afinar.  \\n  \\nCaso 3 - Cliente pregunta por uno específico (ej: \\\"tienes Golden Amber?\\\"):  \\n  Respondes de ese producto, precio, stock, link. NO mencionas otros a menos que te pregunten.  \\n  \\nCaso 4 - Cliente solo saluda o conversa (\\\"hola\\\", \\\"cómo estás\\\"):  \\n  Respondes cálido, corto, y preguntas en qué le puedes ayudar. NO recomiendas productos aún.  \\n  \\nREGLA DE ORO: si la respuesta se siente como plantilla, reescríbela.\\n  \\n[Pregunta abierta para avanzar]  \\n\\nEJEMPLOS DE TONO CORRECTO:  \\n  \\nCliente: \\\"hola\\\"  \\nEmma: \\\"Hola!! ¿en qué te ayudo hoy? 🌸\\\"  \\n  \\nCliente: \\\"busco algo para regalar a mi mamá, ella es clásica\\\"  \\nEmma: \\\"Ay qué chévere! Para ella te va a encantar Ethereal Bloom — floral, elegante, muy de mujer clásica. Desde $165.000 👉 [link]  \\n  \\nSi la quieres más intensa para la noche, también tengo Midnight Velvet. ¿Sabes si le gustan los olores florales o más calidos?\\\"  \\n  \\nCliente: \\\"cuánto demora el envío?\\\"  \\nEmma: \\\"Entre 2 y 5 días hábiles según tu ciudad 📦 Pagas contraentrega o transferencia, como prefieras.\\\"  \\n  \\nCliente: \\\"qué perfumes tienes?\\\"  \\nEmma: \\\"Mira, estos son mis favoritos del momento:  \\n  \\n• Ethereal Bloom — floral fresco, desde $165.000  \\n• Golden Amber — oriental con carácter, desde $210.000  \\n• Midnight Velvet — sensual para noche, desde $189.000  \\n  \\n¿Para ti o para regalar? Así te afino mejor ✨\\\"  \\n  \\nCliente: \\\"me lo recomiendas?\\\"  \\nEmma: \\\"Con los ojos cerrados 🙌 Lo tienes en 50ml o 100ml. ¿Te lo agendo?\\\"  \\n  \\nCliente: \\\"quiero hablar con una persona\\\"  \\nEmma: \\\"Claro, ya le paso el chat a alguien del equipo. Te escriben en un ratico 🙏\\\"\\n  \\nFORMATO DE SALIDA (JSON obligatorio):  \\n{  \\n  \\\"reply\\\": \\\"el mensaje en el tono correcto\\\",  \\n  \\\"intent\\\": \\\"INFO\\\" | \\\"RECOMMEND\\\" | \\\"BUY\\\" | \\\"ESCALATE\\\" | \\\"OTHER\\\",  \\n  \\\"main_product_id\\\": \\\"uuid del producto principal o null\\\",  \\n  \\\"alternative_product_ids\\\": [\\\"uuid1\\\", \\\"uuid2\\\"]\\n\\nEXCEPCIONES:  \\n- Si el cliente pide explícitamente \\\"opciones\\\", \\\"qué tienes\\\", \\\"muéstrame varios\\\" → lista las opciones con nombre, precio y link en formato bullet.\\n- Si el Cliente quiere comparar (\\\"¿cuál es mejor entre X y Y?\\\") → Muestra los 2 con diferencias\\n- Si el cliente pide el catálogo → Link a \\\"/catalogo\\\"\\n\\n\\nFORMATO DE SALIDA (OBLIGATORIO JSON):\\n{  \\n  \\\"reply\\\": \\\"texto del mensaje\\\",  \\n  \\\"intent\\\": \\\"INFO\\\" | \\\"RECOMMEND\\\" | \\\"BUY\\\" | \\\"ESCALATE\\\" | \\\"OTHER\\\",  \\n  \\\"main_product_id\\\": \\\"id_del_producto_principal\\\",  \\n  \\\"alternative_product_ids\\\": [\\\"id1\\\", \\\"id2\\\"]  \\n}\\n\\nIMPORTANTE: en main_product_id y alternative_product_ids usa el UUID exacto (línea \\\"ID:\\\") de la lista, NO el nombre.\\n\\nPRODUCTOS RELEVANTES DISPONIBLES:\\n${productsContext || '(ninguno relevante para esta consulta)'}\\n\\nCLIENTE: ${context.customer?.name || extract.userName || 'visitante'}\\n${context.customer ? `(Cliente registrado, tel: ${context.customer.phone})` : '(Aún no registrado)'}`;\n\nconst history = (context.history || []).slice(-8).map(m => ({\n  role: m.role,\n  content: m.content,\n}));\n\nconst messages = [\n  { role: 'system', content: systemPrompt },\n  ...history,\n];\n\nconst lastUser = messages[messages.length - 1];\nif (!lastUser || lastUser.role !== 'user') {\n  messages.push({ role: 'user', content: extract.message });\n}\n\nreturn [{\n  messages,\n  conversationId: context.conversationId,\n  phone: extract.phone,\n  chatId: extract.chatId,\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2816,
+        -112
+      ],
+      "id": "d6aff938-d7dd-4f35-b2da-bb7a7ef768d7",
+      "name": "Build Prompt"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "ESCALATE",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "5acff0d6-8134-4d70-95a1-91a8028566f8"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "4d723fec-76fe-4fa6-bb3b-6814cb9aaa42",
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "BUY",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        3440,
+        -128
+      ],
+      "id": "e49d692b-f5ac-42b8-9065-b314cb3d5450",
+      "name": "Route by Intent"
+    },
+    {
+      "parameters": {
+        "chatId": "1519669425",
+        "text": "=🚨 *Escalación*  \nCliente: {{ $('Extract Data').item.json.userName }}  \nTel/ChatID: {{ $('Extract Data').item.json.phone }}  \nMensaje: \"{{ $('Extract Data').item.json.message }}\"  \nRevisar: https://t.me/{{ $('Extract Data').item.json.userName }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3680,
+        -240
+      ],
+      "id": "e86c475a-9070-41bd-8c5f-1584e46cc61e",
+      "name": "Notify Admin",
+      "webhookId": "ba337a9a-4dfa-4075-9774-cdd5e1761d4b",
+      "credentials": {
+        "telegramApi": {
+          "id": "8GoauLCUMAK9e6vI",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.reply }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3680,
+        -80
+      ],
+      "id": "09c537d2-272f-4fba-9e68-892154601196",
+      "name": "Send Reply",
+      "webhookId": "89dd8419-44f6-4322-a6d8-0d52c57b475c",
+      "credentials": {
+        "telegramApi": {
+          "id": "8GoauLCUMAK9e6vI",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:3000/api/ai/save-response",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-n8n-token",
+              "value": "25624e724c76f9e80260561e56623219b1f7285193d527a36c243d4ea4879c98"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "conversationId",
+              "value": "={{ $('Parse AI Response').item.json.conversationId }}"
+            },
+            {
+              "name": "content",
+              "value": "={{ $('Parse AI Response').item.json.reply }}"
+            },
+            {
+              "name": "metadata",
+              "value": "={{ $('Parse AI Response').item.json }}"
+            },
+            {
+              "name": "escalate",
+              "value": "={{ $('Parse AI Response').item.json.intent === 'ESCALATE' }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3888,
+        -80
+      ],
+      "id": "5aeeb529-c06c-4d5b-a72e-27567b8a148a",
+      "name": "Save Response"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "Un agente se comunicará contigo en breve 🙌",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2528,
+        -304
+      ],
+      "id": "3c661fdd-637d-4b50-8abd-a52351243bc6",
+      "name": "Send a text message",
+      "webhookId": "69c2ef44-8b8c-4de6-9ada-9c69025ecf6a",
+      "credentials": {
+        "telegramApi": {
+          "id": "8GoauLCUMAK9e6vI",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        2016,
+        0
+      ],
+      "id": "0092f2f2-25e7-45e4-b0be-6113d4ae567c",
+      "name": "No Operation, do nothing1"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Parse AI Response').item.json.chatId }}",
+        "text": "=✨ ¡Perfecto! Te preparo el link para finalizar tu pedido:\n\n👉 https://emanella.store/checkout?phone={{ $('Extract Data').item.json.phone }}\n\nTus datos se pre-llenan automáticamente si ya compraste antes 🛍️",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3680,
+        48
+      ],
+      "id": "5504dba1-f811-41cc-89b0-49ab58d64c0a",
+      "name": "Send Checkout Link",
+      "webhookId": "4e177cfc-f692-4e1e-b165-b7451f31998a",
+      "credentials": {
+        "telegramApi": {
+          "id": "8GoauLCUMAK9e6vI",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Extract Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Data": {
+      "main": [
+        [
+          {
+            "node": "If Has Text?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Has Text?": {
+      "main": [
+        [
+          {
+            "node": "Get Context",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Operation, do nothing1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Context": {
+      "main": [
+        [
+          {
+            "node": "Is Human Mode?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Human Mode?": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "RAG Search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RAG Search": {
+      "main": [
+        [
+          {
+            "node": "Build Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Prompt": {
+      "main": [
+        [
+          {
+            "node": "Groq LLM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq LLM": {
+      "main": [
+        [
+          {
+            "node": "Parse AI Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse AI Response": {
+      "main": [
+        [
+          {
+            "node": "Route by Intent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Intent": {
+      "main": [
+        [
+          {
+            "node": "Notify Admin",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send Reply",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Reply",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send Checkout Link",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Reply": {
+      "main": [
+        [
+          {
+            "node": "Save Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a text message": {
+      "main": [
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "6523b22c-6e1e-4daa-93df-9803bc3a7945",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d36980363ef5d551a35c36501606b20bebae04d995e5e81f2a3e48f9b153c24e"
+  },
+  "id": "7hLC8SICcMKX2S4s",
+  "tags": []
+}

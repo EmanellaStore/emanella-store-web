@@ -5,7 +5,7 @@ import { useCartStore } from "@/store/useCartStore";
 import { Navbar, Footer } from "@/components/shop";
 import { useRouter, useSearchParams } from "next/navigation";
 
-const SHIPPING_COST = 15000; // flat por ahora; luego se puede calcular por ciudad
+const SHIPPING_COST = 15000;
 const FREE_SHIPPING_THRESHOLD = 200000;
 
 export default function CheckoutPage() {
@@ -20,6 +20,12 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [isRestoring, setIsRestoring] = useState(true);
+
+  // ===== PRE-FILL desde Telegram (?phone=) =====
+  const [prefillName, setPrefillName] = useState("");
+  const [prefillPhone, setPrefillPhone] = useState("");
+  const [prefillCity, setPrefillCity] = useState("");
+  const [prefillAddress, setPrefillAddress] = useState("");
 
   // ===== CUPONES =====
   const [couponCode, setCouponCode] = useState("");
@@ -41,7 +47,7 @@ export default function CheckoutPage() {
   const discount = appliedCoupon?.discount ?? 0;
   const total = Math.max(0, subtotal + shipping - discount);
   const searchParams = useSearchParams();
-  
+
   // ===== RESTORE FLOW =====
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -60,11 +66,35 @@ export default function CheckoutPage() {
   }, [items.length, submitted, loading, isRestoring, router]);
 
   // pre-cargar cupón desde URL ?c=CODIGO
-  useEffect(() => {  
-    const couponFromUrl = searchParams.get('c');  
-    if (couponFromUrl && !appliedCoupon) {  
-      setCouponCode(couponFromUrl.toUpperCase());  
-    }  
+  useEffect(() => {
+    const couponFromUrl = searchParams.get("c");
+    if (couponFromUrl && !appliedCoupon) {
+      setCouponCode(couponFromUrl.toUpperCase());
+    }
+  }, [searchParams]);
+
+  // ===== PRE-FILL desde Telegram: ?phone=3001234567 =====
+  useEffect(() => {
+    const phoneFromUrl = searchParams.get("phone");
+    if (!phoneFromUrl) return;
+
+    fetch(`/api/checkout/prefill?phone=${encodeURIComponent(phoneFromUrl)}`)
+      .then((r) => r.json())
+      .then(({ customer }) => {
+        if (customer) {
+          setPrefillName(customer.name ?? "");
+          setPrefillPhone(customer.phone ?? "");
+          setPrefillCity(customer.city ?? "");
+          setPrefillAddress(customer.address ?? "");
+          if (customer.phone) setContact({ phone: customer.phone });
+        } else {
+          // Cliente nuevo: pre-llenar solo el teléfono
+          setPrefillPhone(phoneFromUrl);
+        }
+      })
+      .catch(() => {
+        // Silencioso — el cliente llena el form manualmente
+      });
   }, [searchParams]);
 
   // ===== CUPÓN: aplicar / quitar =====
@@ -126,8 +156,6 @@ export default function CheckoutPage() {
       paymentMethod: formData.get("paymentMethod") as string,
     };
 
-    console.log("[checkout-front] appliedCoupon:", appliedCoupon);
-    console.log("[checkout-front] sending couponCode:", appliedCoupon?.code);
     try {
       const res = await fetch("/api/checkout", {
         method: "POST",
@@ -193,12 +221,16 @@ export default function CheckoutPage() {
                 required
                 name="name"
                 placeholder="Nombre completo"
+                value={prefillName}
+                onChange={(e) => setPrefillName(e.target.value)}
                 className="w-full border border-blush/50 bg-white/50 p-3 outline-none focus:border-gold"
               />
               <input
                 required
                 name="phone"
                 placeholder="WhatsApp (ej: 3001234567)"
+                value={prefillPhone}
+                onChange={(e) => setPrefillPhone(e.target.value)}
                 onBlur={handlePhoneBlur}
                 className="w-full border border-blush/50 bg-white/50 p-3 outline-none focus:border-gold"
               />
@@ -206,12 +238,16 @@ export default function CheckoutPage() {
                 required
                 name="city"
                 placeholder="Ciudad"
+                value={prefillCity}
+                onChange={(e) => setPrefillCity(e.target.value)}
                 className="w-full border border-blush/50 bg-white/50 p-3 outline-none focus:border-gold"
               />
               <input
                 required
                 name="address"
                 placeholder="Dirección exacta"
+                value={prefillAddress}
+                onChange={(e) => setPrefillAddress(e.target.value)}
                 className="w-full border border-blush/50 bg-white/50 p-3 outline-none focus:border-gold"
               />
               <textarea

@@ -28,8 +28,6 @@ export async function createOrder(
   sessionId: string,
   couponCode?: string
 ): Promise<CheckoutResult> {
-  console.log("[service] arguments.length:", arguments.length);
-  console.log("[service] couponCode param:", couponCode);
   try {
     // 1) Upsert del cliente
     const customer = await db.customer.upsert({
@@ -135,14 +133,6 @@ export async function createOrder(
           lastPurchaseAt: new Date(),
           orderCount: { increment: 1 },
           totalSpent: { increment: totalAmount },
-        },
-      });
-
-      //marca que el cliente tiene actividad reciente (evita winback falso)  
-      await tx.customer.update({
-        where: { id: customer.id },
-        data: {
-          lastPurchaseAt: new Date(), // se actualiza también en ENTREGADO con totales  
         },
       });
 
