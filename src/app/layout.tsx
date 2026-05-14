@@ -9,6 +9,11 @@ import WelcomeCaptureModal from "@/components/shop/WelcomeCaptureModel";
 export const metadata: Metadata = {
   title: "Emanella Store | Perfumes & Accesorios",
   description: "Descubre nuestra colección exclusiva de perfumes, bolsos y accesorios.",
+  icons: {
+    icon: "/icon.png",
+    shortcut: "/icon.png",
+    apple: "/icon.png",
+  },
 };
 
 export default function RootLayout({
