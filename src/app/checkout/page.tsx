@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { Suspense, useState, useEffect, useMemo } from "react";
 import { useCartStore } from "@/store/useCartStore";
 import { Navbar, Footer } from "@/components/shop";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -8,7 +8,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 const SHIPPING_COST = 15000;
 const FREE_SHIPPING_THRESHOLD = 200000;
 
-export default function CheckoutPage() {
+function CheckoutContent() {
   const items = useCartStore((state) => state.items);
   const getTotal = useCartStore((state) => state.getTotal);
   const clearCart = useCartStore((state) => state.clearCart);
@@ -370,5 +370,22 @@ export default function CheckoutPage() {
       </section>
       <Footer />
     </main>
+  );
+}
+
+export default function CheckoutPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen bg-cream flex items-center justify-center">
+          <div className="text-center">
+            <div className="inline-block w-8 h-8 border-2 border-gold border-t-transparent rounded-full animate-spin mb-4" />
+            <p className="font-sans text-xs tracking-[0.3em] text-cacao uppercase">Cargando...</p>
+          </div>
+        </main>
+      }
+    >
+      <CheckoutContent />
+    </Suspense>
   );
 }
