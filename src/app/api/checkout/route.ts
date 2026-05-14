@@ -9,7 +9,6 @@ export async function POST(request: NextRequest) {
     if (!data || !items || !Array.isArray(items)) {
       return NextResponse.json({ success: false, error: "Datos inválidos" }, { status: 400 });
     }
-    console.log("[api/checkout] body recibido:", JSON.stringify(body));
     const result = await createOrder(data, items, sessionId, couponCode);
     return NextResponse.json(result);
   } catch (error) {
