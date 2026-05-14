@@ -8,6 +8,7 @@ import { Plus, Search, Pencil, Trash2, X, ChevronLeft, ChevronRight, Eye } from 
 import ProductForm from "@/components/admin/ProductForm";
 import { CATEGORIES } from "@/types/product";
 import { handleCreateProduct, handleUpdateProduct, handleDeleteProduct, handleGetProducts } from "./actions";
+import { useToastStore } from "@/store/useToastStore";
 
 interface ProductVariant {
   id: string;
@@ -46,6 +47,7 @@ export default function AdminProductsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [showInactive, setShowInactive] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const showToast = useToastStore((s) => s.showToast);
   const [, startTransition] = useTransition();
 
   const limit = 10;
@@ -91,11 +93,16 @@ export default function AdminProductsPage() {
 
     setDeletingId(productId);
     try {
-      await handleDeleteProduct(productId);
-      await loadProducts();
+      const result = await handleDeleteProduct(productId);
+      if (result && !result.success) {
+        showToast({ title: "Error", description: result.error || "Error al eliminar el producto" });
+      } else {
+        showToast({ title: "Eliminado", description: "Producto eliminado correctamente" });
+        await loadProducts();
+      }
     } catch (error) {
       console.error("Error deleting product:", error);
-      alert("Error al eliminar el producto");
+      showToast({ title: "Error", description: "Error inesperado al eliminar el producto" });
     } finally {
       setDeletingId(null);
     }
@@ -120,18 +127,28 @@ export default function AdminProductsPage() {
       formData.set("variants", JSON.stringify(data.variants));
       formData.set("images", JSON.stringify(data.images));
 
+      let result;
       if (editingProduct) {
-        await handleUpdateProduct(editingProduct.id, formData);
+        result = await handleUpdateProduct(editingProduct.id, formData);
       } else {
-        await handleCreateProduct(formData);
+        result = await handleCreateProduct(formData);
       }
 
+      if (result && !result.success) {
+        showToast({ title: "Error", description: result.error || "Error al guardar el producto" });
+        return;
+      }
+
+      showToast({ 
+        title: editingProduct ? "Actualizado" : "Creado", 
+        description: `Producto ${editingProduct ? "actualizado" : "creado"} correctamente` 
+      });
       setShowForm(false);
       setEditingProduct(null);
       await loadProducts();
     } catch (error) {
       console.error("Error saving product:", error);
-      throw error;
+      showToast({ title: "Error", description: "Error inesperado al guardar el producto" });
     }
   };
 

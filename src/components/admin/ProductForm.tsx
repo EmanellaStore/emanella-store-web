@@ -63,7 +63,15 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
 
   const handleNameChange = (name: string) => {
     const slug = product ? formData.slug : generateSlug(name);
-    setFormData((prev) => ({ ...prev, name, slug }));
+    setFormData((prev) => ({
+      ...prev,
+      name,
+      slug,
+      variants: prev.variants.map((v, i) => ({
+        ...v,
+        sku: generateSku(name, v.attributeValue || "NEW", i),
+      })),
+    }));
   };
 
   const handleVariantChange = (index: number, field: string, value: string | number) => {
@@ -71,7 +79,7 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
       const newVariants = prev.variants.map((v, i) => {
         if (i !== index) return v;
         const updated = { ...v, [field]: value };
-        if (field === "attributeValue" || (field === "attributeValue" && !updated.sku)) {
+        if (field === "attributeValue") {
           updated.sku = generateSku(formData.name, String(value), index);
         }
         return updated;

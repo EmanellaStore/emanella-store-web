@@ -1,4 +1,5 @@
 "use server";
+import { Prisma } from "@prisma/client";
 
 import { revalidatePath } from "next/cache";
 import {
@@ -50,7 +51,19 @@ export async function handleCreateProduct(formData: FormData) {
     return { success: true, product: serializeProduct(product) };
   } catch (error) {
     console.error("Error creating product:", error);
-    throw error;
+    if (error instanceof Error) {
+      return { success: false, error: error.message };
+    }
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === "P2002") {
+        const target = (error.meta?.target as string[]) || [];
+        return { 
+          success: false, 
+          error: `Ya existe un registro con este ${target.join(", ")}` 
+        };
+      }
+    }
+    return { success: false, error: "Error desconocido al crear el producto" };
   }
 }
 
@@ -74,7 +87,19 @@ export async function handleUpdateProduct(productId: string, formData: FormData)
     return { success: true, product: serializeProduct(product) };
   } catch (error) {
     console.error("Error updating product:", error);
-    throw error;
+    if (error instanceof Error) {
+      return { success: false, error: error.message };
+    }
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === "P2002") {
+        const target = (error.meta?.target as string[]) || [];
+        return { 
+          success: false, 
+          error: `Ya existe un registro con este ${target.join(", ")}` 
+        };
+      }
+    }
+    return { success: false, error: "Error desconocido al actualizar el producto" };
   }
 }
 
@@ -86,7 +111,10 @@ export async function handleDeleteProduct(productId: string) {
     return { success: true };
   } catch (error) {
     console.error("Error deleting product:", error);
-    throw error;
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : "Error desconocido al eliminar el producto" 
+    };
   }
 }
 

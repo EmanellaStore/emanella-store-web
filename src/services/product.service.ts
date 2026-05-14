@@ -1,8 +1,30 @@
-//src/services/product.service.ts
 import db from "@/lib/db";
 import { ProductInput } from "@/types/product";
+import { updateProductEmbedding } from "@/lib/ai";
 
 export async function createProduct(data: ProductInput) {
+  // Verificar duplicados de SKU antes de empezar
+  const skus = data.variants.map((v) => v.sku);
+  const existingVariants = await db.productVariant.findMany({
+    where: { sku: { in: skus } },
+    select: { sku: true },
+  });
+
+  if (existingVariants.length > 0) {
+    const duplicateSkus = existingVariants.map((v) => v.sku).join(", ");
+    throw new Error(`Los siguientes SKUs ya existen: ${duplicateSkus}`);
+  }
+
+  // Verificar duplicado de slug
+  const existingProduct = await db.product.findUnique({
+    where: { slug: data.slug },
+    select: { slug: true },
+  });
+
+  if (existingProduct) {
+    throw new Error(`Ya existe un producto con el slug: ${data.slug}`);
+  }
+
   const product = await db.$transaction(async (tx) => {
     const newProduct = await tx.product.create({
       data: {
@@ -37,6 +59,9 @@ export async function createProduct(data: ProductInput) {
 
     return newProduct;
   });
+
+  // Actualizar embedding para el RAG de forma asíncrona
+  updateProductEmbedding(product.id);
 
   return product;
 }
@@ -158,6 +183,11 @@ export async function updateProduct(productId: string, data: ProductInput) {
     });
   });
 
+  // Actualizar embedding para el RAG de forma asíncrona
+  if (product) {
+    updateProductEmbedding(product.id);
+  }
+
   return product;
 }
 
@@ -273,8 +303,14 @@ export async function getAllCategories() {
 }
 
 export async function toggleProductStatus(productId: string) {
-  return db.product.update({
+  const product = await db.product.findUnique({ where: { id: productId } });
+  if (!product) throw new Error("Producto no encontrado");
+
+  const updated = await db.product.update({
     where: { id: productId },
-    data: { isActive: true },
+    data: { isActive: !product.isActive },
   });
+
+  updateProductEmbedding(productId);
+  return updated;
 }

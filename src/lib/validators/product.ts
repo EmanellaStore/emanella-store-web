@@ -44,18 +44,43 @@ export function generateSlug(name: string): string {
 }
 
 export function generateSku(productName: string, attributeValue: string, index: number): string {
-  const namePrefix = productName
-    .toUpperCase()
-    .slice(0, 3)
-    .replace(/[^A-Z]/g, "X");
+  // 1. Prefijo del nombre: iniciales si hay varias palabras, sino primeras 3-4 letras
+  const cleanName = productName.trim();
+  let namePart = "";
   
-  const valuePrefix = attributeValue
+  if (!cleanName) {
+    namePart = "SKU";
+  } else {
+    const words = cleanName.split(/\s+/);
+    if (words.length >= 2) {
+      // Tomar la primera letra de cada palabra
+      namePart = words
+        .map((w) => w[0])
+        .join("")
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, "")
+        .slice(0, 4);
+    } else {
+      // Tomar las primeras 3-4 letras
+      namePart = cleanName
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, "")
+        .slice(0, 4);
+    }
+  }
+
+  // Asegurar que tenga al menos 3 caracteres
+  namePart = namePart.padEnd(3, "X");
+
+  // 2. Parte del atributo (ej: 100M)
+  const valuePart = attributeValue
     .toUpperCase()
     .replace(/[^A-Z0-9]/g, "")
     .slice(0, 4)
-    .padEnd(4, "0");
-  
+    .padEnd(1, "0"); // Al menos un caracter
+
+  // 3. Índice para evitar duplicados en el mismo producto
   const num = String(index + 1).padStart(2, "0");
-  
-  return `${namePrefix}-${valuePrefix}-${num}`;
+
+  return `${namePart}-${valuePart}-${num}`;
 }

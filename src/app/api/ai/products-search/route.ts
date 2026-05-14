@@ -1,29 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
+import { generateEmbedding } from '@/lib/ai';
 
-const HF_TOKEN = process.env.HF_TOKEN!;
 const MODEL = 'sentence-transformers/all-MiniLM-L6-v2';
-
-async function embed(text: string): Promise<number[]> {
-    const res = await fetch("http://localhost:11434/api/embeddings", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: "nomic-embed-text",
-        prompt: text
-      })
-    });
-  
-    const data = await res.json();
-  
-    if (!data.embedding) {
-      throw new Error("Error generando embedding");
-    }
-  
-    return data.embedding;
-  }
 
 export async function POST(req: NextRequest) {
   const token = req.headers.get('x-n8n-token');
@@ -36,7 +15,7 @@ export async function POST(req: NextRequest) {
   const limit = Math.min(Math.max(parseInt(body.limit) || 3, 1), 10);
   if (!query) return NextResponse.json({ error: 'query required' }, { status: 400 });
 
-  const vector = await embed(query);
+  const vector = await generateEmbedding(query);
   const vectorStr = `[${vector.join(',')}]`;
 
   // Búsqueda semántica + unimos variantes e imágenes
