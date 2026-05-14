@@ -58,12 +58,17 @@ export default function Navbar() {
     <header className="fixed top-0 w-full z-50 bg-cream/90 backdrop-blur-sm border-b border-blush/40">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          <Link href="/" className="flex items-center gap-2">
-            <span className="font-serif text-2xl font-semibold text-cacao tracking-widest">
-              Emanella
-            </span>
-            <span className="font-serif text-2xl font-light text-gold tracking-widest">
-              Store
+          <Link href="/" className="flex flex-col group">
+            <div className="flex items-center gap-2">
+              <span className="font-serif text-2xl font-semibold text-cacao tracking-widest leading-tight">
+                Emanella
+              </span>
+              <span className="font-serif text-2xl font-light text-gold tracking-widest leading-tight">
+                Store
+              </span>
+            </div>
+            <span className="font-serif text-[10px] italic text-cacao/60 tracking-[0.2em] -mt-1 ml-0.5 transition-colors group-hover:text-gold/80">
+              By Maria Alejandra Pinzon
             </span>
           </Link>
 

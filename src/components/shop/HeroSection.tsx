@@ -4,7 +4,7 @@ import Image from "next/image";
 export default function HeroSection() {
     return (
         <section className="relative min-h-screen flex items-center bg-cream overflow-hidden pt-16">
-            
+
             {/* Imagen de fondo con next/image (más control) */}
             <Image
                 src="/hero-banner.png"

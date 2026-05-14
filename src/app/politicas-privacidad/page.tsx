@@ -1,4 +1,11 @@
+import type { Metadata } from "next";
 import { Navbar, Footer } from "@/components/shop";
+
+export const metadata: Metadata = {
+  title: "Políticas de Privacidad | Emanella Store",
+  description:
+    "Conoce cómo Emanella Store recopila, usa y protege tus datos personales. Tu privacidad es nuestra prioridad.",
+};
 
 export default function PoliticasPrivacidadPage() {
   return (
