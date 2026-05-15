@@ -156,7 +156,7 @@ export default function AdminOrdersPage() {
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           {(["PENDIENTE", "CONFIRMADO", "ENVIADO", "ENTREGADO"] as const).map((s) => (
-            <div key={s} className="bg-white border border-blush/20 p-4">
+            <div key={s} className="bg-beige border border-blush/20 p-4">
               <p className="font-sans text-xs text-warm-gray uppercase tracking-widest">{s}</p>
               <p className="font-serif text-2xl text-cacao mt-1">
                 {orders.filter((o) => o.status === s).length}
@@ -166,14 +166,14 @@ export default function AdminOrdersPage() {
         </div>
 
         {orders.length === 0 ? (
-          <div className="bg-white border border-blush/20 p-12 text-center">
+          <div className="bg-beige border border-blush/20 p-12 text-center">
             <p className="font-serif text-2xl text-cacao mb-2">No hay pedidos todavía</p>
             <p className="font-sans text-sm text-warm-gray">
               Los pedidos aparecerán aquí cuando los clientes realicen compras.
             </p>
           </div>
         ) : (
-          <div className="bg-white border border-blush/20 overflow-x-auto">
+          <div className="bg-beige border border-blush/20 overflow-x-auto">
             <table className="w-full text-left">
               <thead>
                 <tr className="bg-cacao text-cream text-[10px] uppercase tracking-widest">
@@ -278,9 +278,9 @@ export default function AdminOrdersPage() {
 
       {/* Modal: Ingresar guía de envío */}
       {shippingOrderId && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white p-6 max-w-md w-full">
-            <h3 className="font-serif text-xl text-cacao mb-4">Información de envío</h3>
+        <div className="fixed inset-0 bg-warm-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-beige p-6 max-w-md w-full border border-blush/20 shadow-xl shadow-black/20 rounded-2xl">
+            <h3 className="font-serif text-2xl text-cacao mb-4">Actualizar Guía de Envío</h3>
             <p className="text-xs text-warm-gray mb-4">
               Estos datos se enviarán al cliente por WhatsApp/Telegram.
             </p>
@@ -291,14 +291,13 @@ export default function AdminOrdersPage() {
                 <select
                   value={trackingCarrier}
                   onChange={(e) => setTrackingCarrier(e.target.value)}
-                  className="w-full border border-blush/50 p-2 text-sm bg-white"
+                  className="w-full border border-blush/50 p-2 text-sm bg-cream outline-none focus:border-gold"
                 >
                   <option value="">Selecciona...</option>
-                  <option value="Servientrega">Servientrega</option>
+                  <option value="InterRapidísimo">InterRapidísimo</option>
                   <option value="Coordinadora">Coordinadora</option>
-                  <option value="Interrapidisimo">Interrapidísimo</option>
-                  <option value="Envia">Envía</option>
-                  <option value="Otra">Otra</option>
+                  <option value="Servientrega">Servientrega</option>
+                  <option value="Envía">Envía</option>
                 </select>
               </div>
 
@@ -309,7 +308,7 @@ export default function AdminOrdersPage() {
                   value={trackingCode}
                   onChange={(e) => setTrackingCode(e.target.value)}
                   placeholder="Ej: 1234567890"
-                  className="w-full border border-blush/50 p-2 text-sm bg-white"
+                  className="w-full border border-blush/50 p-2 text-sm bg-cream outline-none focus:border-gold"
                   autoFocus
                 />
               </div>

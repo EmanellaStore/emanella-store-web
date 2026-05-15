@@ -223,7 +223,7 @@ function CheckoutContent() {
                 placeholder="Nombre completo"
                 value={prefillName}
                 onChange={(e) => setPrefillName(e.target.value)}
-                className="w-full border border-blush/50 bg-white/50 p-3 outline-none focus:border-gold"
+                className="w-full border border-blush/50 bg-beige p-3 outline-none focus:border-gold"
               />
               <input
                 required
@@ -232,7 +232,7 @@ function CheckoutContent() {
                 value={prefillPhone}
                 onChange={(e) => setPrefillPhone(e.target.value)}
                 onBlur={handlePhoneBlur}
-                className="w-full border border-blush/50 bg-white/50 p-3 outline-none focus:border-gold"
+                className="w-full border border-blush/50 bg-beige p-3 outline-none focus:border-gold"
               />
               <input
                 required
@@ -240,7 +240,7 @@ function CheckoutContent() {
                 placeholder="Ciudad"
                 value={prefillCity}
                 onChange={(e) => setPrefillCity(e.target.value)}
-                className="w-full border border-blush/50 bg-white/50 p-3 outline-none focus:border-gold"
+                className="w-full border border-blush/50 bg-beige p-3 outline-none focus:border-gold"
               />
               <input
                 required
@@ -248,12 +248,12 @@ function CheckoutContent() {
                 placeholder="Dirección exacta"
                 value={prefillAddress}
                 onChange={(e) => setPrefillAddress(e.target.value)}
-                className="w-full border border-blush/50 bg-white/50 p-3 outline-none focus:border-gold"
+                className="w-full border border-blush/50 bg-beige p-3 outline-none focus:border-gold"
               />
               <textarea
                 name="notes"
                 placeholder="Notas adicionales (opcional)"
-                className="w-full border border-blush/50 bg-white/50 p-3 outline-none focus:border-gold h-24"
+                className="w-full border border-blush/50 bg-beige p-3 outline-none focus:border-gold h-24"
               />
             </div>
           </div>
@@ -264,7 +264,7 @@ function CheckoutContent() {
               Método de Pago
             </h2>
             <div className="space-y-3">
-              <label className="flex items-center gap-3 p-4 border border-blush/50 bg-white/50 cursor-pointer hover:border-gold transition-colors">
+              <label className="flex items-center gap-3 p-4 border border-blush/50 bg-beige cursor-pointer hover:border-gold transition-colors">
                 <input
                   type="radio"
                   name="paymentMethod"
@@ -276,7 +276,7 @@ function CheckoutContent() {
                   Pago Contraentrega
                 </span>
               </label>
-              <label className="flex items-center gap-3 p-4 border border-blush/50 bg-white/50 cursor-pointer hover:border-gold transition-colors">
+              <label className="flex items-center gap-3 p-4 border border-blush/50 bg-beige cursor-pointer hover:border-gold transition-colors">
                 <input
                   type="radio"
                   name="paymentMethod"
@@ -290,7 +290,7 @@ function CheckoutContent() {
             </div>
 
             {/* ===== CUPÓN ===== */}
-            <div className="bg-white/50 border border-blush/30 p-4 space-y-2">
+            <div className="bg-beige border border-blush/30 p-4 space-y-2">
               <p className="font-sans text-xs uppercase tracking-widest text-cacao">
                 ¿Tienes un cupón?
               </p>
@@ -301,7 +301,7 @@ function CheckoutContent() {
                     value={couponCode}
                     onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
                     placeholder="Código"
-                    className="flex-1 border border-blush/50 bg-white px-3 py-2 text-sm outline-none focus:border-gold uppercase"
+                    className="flex-1 border border-blush/50 bg-cream px-3 py-2 text-sm outline-none focus:border-gold uppercase"
                   />
                   <button
                     type="button"
@@ -332,7 +332,7 @@ function CheckoutContent() {
             </div>
 
             {/* ===== RESUMEN ===== */}
-            <div className="bg-cacao p-6 text-cream space-y-3">
+            <div className="bg-beige border border-blush/30 p-6 text-cacao space-y-3">
               <div className="flex justify-between font-sans text-xs tracking-widest uppercase opacity-80">
                 <span>Subtotal</span>
                 <span>${subtotal.toLocaleString("es-CO")}</span>
@@ -351,7 +351,7 @@ function CheckoutContent() {
                   <span>-${discount.toLocaleString("es-CO")}</span>
                 </div>
               )}
-              <div className="border-t border-cream/20 pt-3 flex justify-between font-sans text-sm tracking-widest uppercase">
+              <div className="border-t border-blush/20 pt-3 flex justify-between font-sans text-sm tracking-widest uppercase">
                 <span>Total</span>
                 <span className="text-gold font-bold">
                   ${total.toLocaleString("es-CO")}

@@ -361,7 +361,7 @@ export default function OrderDetailPage() {
         {/* Columna principal */}
         <div className="lg:col-span-2 space-y-6">
           {/* Productos */}
-          <div className="bg-white border border-blush/20 p-6">
+          <div className="bg-beige border border-blush/20 p-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="font-serif text-xl text-cacao">Productos</h2>
               {!editingItems ? (
@@ -410,7 +410,7 @@ export default function OrderDetailPage() {
                         setSelectedProductId(e.target.value);
                         setSelectedVariantId("");
                       }}
-                      className="w-full border border-blush/50 p-2 text-sm bg-white"
+                      className="w-full border border-blush/50 p-2 text-sm bg-beige"
                     >
                       <option value="">Seleccionar producto...</option>
                       {products.map((p) => (
@@ -424,7 +424,7 @@ export default function OrderDetailPage() {
                     <select
                       value={selectedVariantId}
                       onChange={(e) => setSelectedVariantId(e.target.value)}
-                      className="w-full border border-blush/50 p-2 text-sm bg-white"
+                      className="w-full border border-blush/50 p-2 text-sm bg-beige"
                       disabled={!selectedProductId}
                     >
                       <option value="">Seleccionar variante...</option>
@@ -445,7 +445,7 @@ export default function OrderDetailPage() {
                     onChange={(e) =>
                       setNewQuantity(parseInt(e.target.value) || 1)
                     }
-                    className="w-20 border border-blush/50 p-2 text-sm bg-white"
+                    className="w-20 border border-blush/50 p-2 text-sm bg-beige"
                   />
                   <button
                     onClick={addNewItem}
@@ -530,7 +530,7 @@ export default function OrderDetailPage() {
           </div>
 
           {/* Cambio de estado */}
-          <div className="bg-white border border-blush/20 p-6">
+          <div className="bg-beige border border-blush/20 p-6">
             <h2 className="font-serif text-xl text-cacao mb-4">
               Estado del Pedido
             </h2>
@@ -560,7 +560,7 @@ export default function OrderDetailPage() {
           </div>
 
           {/* Historial */}
-          <div className="bg-white border border-blush/20 p-6">
+          <div className="bg-beige border border-blush/20 p-6">
             <h2 className="font-serif text-xl text-cacao mb-4">Historial</h2>
             <div className="space-y-3">
               {order.events.map((event) => (
@@ -588,7 +588,7 @@ export default function OrderDetailPage() {
         {/* Columna lateral */}
         <div className="space-y-6">
           {/* Cliente */}
-          <div className="bg-white border border-blush/20 p-6">
+          <div className="bg-beige border border-blush/20 p-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="font-serif text-xl text-cacao">Cliente</h2>
               {!editingCustomer ? (
@@ -648,7 +648,7 @@ export default function OrderDetailPage() {
                           [key]: e.target.value,
                         })
                       }
-                      className="w-full border border-blush/50 p-2 text-sm bg-white"
+                      className="w-full border border-blush/50 p-2 text-sm bg-beige"
                     />
                   </div>
                 ))}
@@ -664,7 +664,7 @@ export default function OrderDetailPage() {
                         notes: e.target.value,
                       })
                     }
-                    className="w-full border border-blush/50 p-2 text-sm bg-white h-20"
+                    className="w-full border border-blush/50 p-2 text-sm bg-beige h-20"
                   />
                 </div>
               </div>
@@ -703,7 +703,7 @@ export default function OrderDetailPage() {
           </div>
 
           {/* Info del pedido */}
-          <div className="bg-white border border-blush/20 p-6">
+          <div className="bg-beige border border-blush/20 p-6">
             <h2 className="font-serif text-xl text-cacao mb-4">Información</h2>
             <div className="space-y-2 text-sm">
               <p>
@@ -719,7 +719,7 @@ export default function OrderDetailPage() {
             </div>
           </div>
           {(order.status === "ENVIADO" || order.status === "ENTREGADO") && (
-            <div className="bg-white border border-blush/20 p-6">
+            <div className="bg-beige border border-blush/20 p-6">
               <h2 className="font-serif text-xl text-cacao mb-4">Envío</h2>
               <div className="space-y-2 text-sm">
                 <p>
@@ -738,7 +738,7 @@ export default function OrderDetailPage() {
       {/* Modal: Ingresar guía de envío */}
       {showShippingModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white p-6 max-w-md w-full">
+          <div className="bg-beige p-6 max-w-md w-full">
             <h3 className="font-serif text-xl text-cacao mb-4">Información de envío</h3>
             <p className="text-xs text-warm-gray mb-4">
               Estos datos se enviarán al cliente por WhatsApp/Telegram.
@@ -750,7 +750,7 @@ export default function OrderDetailPage() {
                 <select
                   value={trackingCarrier}
                   onChange={(e) => setTrackingCarrier(e.target.value)}
-                  className="w-full border border-blush/50 p-2 text-sm bg-white"
+                  className="w-full border border-blush/50 p-2 text-sm bg-beige"
                 >
                   <option value="">Selecciona...</option>
                   <option value="Servientrega">Servientrega</option>
@@ -768,7 +768,7 @@ export default function OrderDetailPage() {
                   value={trackingCode}
                   onChange={(e) => setTrackingCode(e.target.value)}
                   placeholder="Ej: 1234567890"
-                  className="w-full border border-blush/50 p-2 text-sm bg-white"
+                  className="w-full border border-blush/50 p-2 text-sm bg-beige"
                   autoFocus
                 />
               </div>

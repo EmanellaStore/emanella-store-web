@@ -96,7 +96,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                             name="q"
                             defaultValue={q}
                             placeholder="Buscar productos..."
-                            className="w-full border border-blush/50 bg-white/70 px-4 py-3 text-sm text-cacao outline-none focus:border-gold"
+                            className="w-full border border-blush/50 bg-beige px-4 py-3 text-sm text-cacao outline-none focus:border-gold"
                         />
                         {categoria ? <input type="hidden" name="categoria" value={categoria} /> : null}
                         <button

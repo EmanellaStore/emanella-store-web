@@ -121,7 +121,7 @@ export default function CartPage() {
 
                     {/* Resumen del pedido */}
                     <div className="lg:col-span-1">
-                        <div className="bg-white/50 border border-blush/20 p-8 sticky top-32">
+                        <div className="bg-beige border border-blush/20 p-8 sticky top-32">
                             <h2 className="font-serif text-2xl text-cacao mb-6">Resumen</h2>
 
                             <div className="space-y-3 mb-6 font-sans text-sm">

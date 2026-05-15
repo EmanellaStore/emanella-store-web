@@ -55,76 +55,81 @@ export default function Navbar() {
   };
 
   return (
-    <header className="fixed top-0 w-full z-50 bg-cream/90 backdrop-blur-sm border-b border-blush/40">
+    <header className="fixed top-0 w-full z-50 bg-cream/80 backdrop-blur-md border-b border-blush/30 transition-all duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+        <div className="flex items-center justify-between h-20">
+          {/* Logo */}
           <Link href="/" className="flex flex-col group">
-            <div className="flex items-center gap-2">
-              <span className="font-serif text-2xl font-semibold text-cacao tracking-widest leading-tight">
-                Emanella
-              </span>
-              <span className="font-serif text-2xl font-light text-gold tracking-widest leading-tight">
-                Store
+            <div className="flex items-center gap-1.5">
+              <span className="font-serif text-3xl font-medium text-cacao tracking-wider leading-none">
+                Emanella <span className="text-gold">Store</span>
               </span>
             </div>
-            <span className="font-serif text-[10px] italic text-cacao/60 tracking-[0.2em] -mt-1 ml-0.5 transition-colors group-hover:text-gold/80">
-              By Maria Alejandra Pinzon
+            <span className="font-sans text-[9px] uppercase text-warm-gray tracking-[0.3em] mt-1 ml-0.5 transition-colors group-hover:text-gold">
+              Perfumería & Accesorios
             </span>
           </Link>
 
-          <nav className="hidden md:flex items-center gap-8">
-            {["Catálogo", "Perfumes", "Bolsos", "Accesorios"].map((item) => (
+          {/* Menú Principal */}
+          <nav className="hidden md:flex items-center gap-10">
+            {[
+              { name: "Inicio", path: "/" },
+              { name: "Tienda", path: "/catalogo" },
+              { name: "Ofertas", path: "/catalogo?ofertas=true" },
+              { name: "Sobre Nosotros", path: "/sobre-nosotros" },
+              { name: "Contacto", path: "/contacto" },
+            ].map((item) => (
               <Link
-                key={item}
-                href={`/catalogo${item !== "Catálogo" ? `?categoria=${item.toLowerCase()}` : ""}`}
-                className="font-sans text-xs tracking-[0.2em] text-warm-gray hover:text-gold transition-colors uppercase"
+                key={item.name}
+                href={item.path}
+                className="font-sans text-[11px] font-medium tracking-[0.15em] text-cacao hover:text-gold transition-all duration-300 uppercase relative group"
               >
-                {item}
+                {item.name}
+                <span className="absolute -bottom-1.5 left-1/2 w-0 h-[1px] bg-gold transition-all duration-300 group-hover:w-1/2 group-hover:-translate-x-1/2"></span>
+                <span className="absolute -bottom-1.5 right-1/2 w-0 h-[1px] bg-gold transition-all duration-300 group-hover:w-1/2 group-hover:translate-x-1/2"></span>
               </Link>
             ))}
           </nav>
 
-          <div className="flex items-center gap-4">
+          {/* Iconos */}
+          <div className="flex items-center gap-5">
             {!authState.ready ? (
               <div className="w-10" />
             ) : authState.isAdmin ? (
-              <div className="flex items-center gap-3">
-                <Link href="/admin" className="p-2 text-cacao hover:text-gold transition-colors relative" title="Panel Admin">
-                  <Settings size={20} strokeWidth={1.5} />
-                  <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[8px] text-gold">
-                    Admin
-                  </span>
+              <div className="flex items-center gap-4">
+                <Link href="/admin" className="text-cacao hover:text-gold transition-colors" title="Panel Admin">
+                  <Settings size={18} strokeWidth={1.5} />
                 </Link>
-                <button onClick={handleLogout} className="p-2 text-cacao hover:text-red-500" title="Cerrar sesión">
-                  <LogOut size={20} strokeWidth={1.5} />
+                <button onClick={handleLogout} className="text-cacao hover:text-red-400 transition-colors" title="Cerrar sesión">
+                  <LogOut size={18} strokeWidth={1.5} />
                 </button>
               </div>
             ) : authState.user ? (
-              <div className="flex items-center gap-3">
-                <span className="text-xs text-cacao font-sans hidden md:block">
-                  Hola, <span className="text-gold font-bold">{authState.user.name}</span>
+              <div className="flex items-center gap-4">
+                <span className="text-[11px] text-warm-gray font-sans uppercase tracking-widest hidden md:block">
+                  Hola, <span className="text-cacao font-medium">{authState.user.name}</span>
                 </span>
-                <button onClick={handleLogout} className="p-2 text-cacao hover:text-red-500" title="Cerrar sesión">
-                  <LogOut size={20} strokeWidth={1.5} />
+                <button onClick={handleLogout} className="text-cacao hover:text-red-400 transition-colors" title="Cerrar sesión">
+                  <LogOut size={18} strokeWidth={1.5} />
                 </button>
               </div>
             ) : (
-              <Link href="/login" className="p-2 text-cacao hover:text-gold transition-colors" title="Iniciar sesión">
-                <User size={20} strokeWidth={1.5} />
+              <Link href="/login" className="text-cacao hover:text-gold transition-colors" title="Iniciar sesión">
+                <User size={18} strokeWidth={1.5} />
               </Link>
             )}
 
-            <Link href="/carrito" className="relative p-2 text-cacao hover:text-gold transition-colors">
-              <ShoppingBag size={20} strokeWidth={1.5} />
+            <Link href="/carrito" className="relative text-cacao hover:text-gold transition-colors">
+              <ShoppingBag size={18} strokeWidth={1.5} />
               {itemCount > 0 && (
-                <span className="absolute top-1 right-1 bg-gold text-cream text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-sans">
+                <span className="absolute -top-1.5 -right-2 bg-blush-dark text-warm-black text-[9px] font-medium w-4 h-4 rounded-full flex items-center justify-center font-sans shadow-sm">
                   {itemCount}
                 </span>
               )}
             </Link>
 
-            <button className="md:hidden p-2 text-cacao" onClick={() => setMenuOpen(!menuOpen)}>
-              {menuOpen ? <X size={20} /> : <Menu size={20} />}
+            <button className="md:hidden text-cacao" onClick={() => setMenuOpen(!menuOpen)}>
+              {menuOpen ? <X size={20} strokeWidth={1.5} /> : <Menu size={20} strokeWidth={1.5} />}
             </button>
           </div>
         </div>
