@@ -63,7 +63,14 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
         },
     });
 
-    const normalizedProducts = products.map((product) => ({
+    // Mezclar los productos aleatoriamente (Fisher-Yates shuffle)
+    const shuffledProducts = [...products];
+    for (let i = shuffledProducts.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffledProducts[i], shuffledProducts[j]] = [shuffledProducts[j], shuffledProducts[i]];
+    }
+
+    const normalizedProducts = shuffledProducts.map((product) => ({
         id: product.id,
         name: product.name,
         slug: product.slug,
