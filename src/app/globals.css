@@ -11,22 +11,22 @@
 @import "@fontsource/jost/600.css";
 
 @theme {
-  /* ── Colores Emanella Store (Estética Pink & Charcoal Dark Mode) ── */
-  /* Fondos (Gris oscuro / Negro suave) */
-  --color-cream: #242021; /* Fondo principal: Charcoal cálido */
-  --color-beige: #2E292A; /* Fondo secundario: Charcoal un tono más claro */
+  /* ── Colores Emanella Store (Estética Purple & Lilac Dark Mode) ── */
+  /* Fondos (Violeta profundo / Negro Berenjena) */
+  --color-cream: #1A1625; /* Fondo principal: Eggplant charcoal */
+  --color-beige: #241F33; /* Fondo secundario: Violet charcoal un poco más claro */
   
-  /* Acentos (Gama de Rosas Pastel) */
-  --color-gold: #F4A6C1; /* Rosa pastel principal (Elegante y suave) */
-  --color-gold-dark: #E58AA8; /* Rosa más intenso para hovers */
-  --color-blush: #F9CCD8; /* Rosa bebé muy claro (reemplaza el lila/menta) */
-  --color-blush-dark: #EFAEC0;
+  /* Acentos (Gama de Lilas y Lavanda) */
+  --color-gold: #B197FC; /* Lilas suave principal (Elegante y místico) */
+  --color-gold-dark: #9477E5; /* Lavanda más intenso para hovers */
+  --color-blush: #D1C4E9; /* Lavanda pálido (reemplaza el rosa bebé) */
+  --color-blush-dark: #B39DDB;
   
-  /* Textos (Blancos rosáceos y grises pastel) */
-  --color-cacao: #FDF4F6; /* Texto principal: Blanco con un toque mínimo de rosa */
-  --color-cacao-light: #B5AEB0; /* Texto secundario: Gris pastel suave */
-  --color-warm-gray: #8E878A; /* Gris medio para bordes e iconos */
-  --color-warm-black: #161415; /* Negro profundo para Footer y Navbar */
+  /* Textos (Blancos lavanda y grises violeta) */
+  --color-cacao: #F3E5F5; /* Texto principal: Blanco con un toque mínimo de violeta */
+  --color-cacao-light: #BDB7C9; /* Texto secundario: Gris lila suave */
+  --color-warm-gray: #8B8699; /* Gris medio para bordes e iconos */
+  --color-warm-black: #0F0D14; /* Negro obsidiana profundo para Footer y Navbar */
 
   /* ── Tipografías ── */
   --font-serif: "Cormorant Garamond", Georgia, serif;

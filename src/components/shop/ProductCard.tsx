@@ -5,6 +5,7 @@ interface ProductCardProps {
   name: string;
   slug: string;
   imageUrl?: string | null;
+  hoverImageUrl?: string | null;
   category: string;
   price: number;
 }
@@ -17,6 +18,7 @@ export default function ProductCard({
   name,
   slug,
   imageUrl,
+  hoverImageUrl,
   category,
   price,
 }: ProductCardProps) {
@@ -26,12 +28,26 @@ export default function ProductCard({
     <Link href={`/producto/${slug}`} className="group block h-full flex flex-col">
       <div className="relative aspect-[3/4] bg-white/5 rounded-2xl overflow-hidden mb-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] border border-white/5 transition-all duration-500 group-hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.2)] group-hover:-translate-y-1">
         {hasImage ? (
-          <Image
-            src={imageUrl!}
-            alt={name}
-            fill
-            className="object-cover transition-transform duration-1000 group-hover:scale-105"
-          />
+          <>
+            <Image
+              src={imageUrl!}
+              alt={name}
+              fill
+              quality={100}
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+              className={`object-cover transition-all duration-1000 group-hover:scale-105 ${hoverImageUrl ? "group-hover:opacity-0" : ""}`}
+            />
+            {hoverImageUrl && (
+              <Image
+                src={hoverImageUrl}
+                alt={`${name} alternativa`}
+                fill
+                quality={100}
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                className="object-cover absolute inset-0 opacity-0 transition-all duration-1000 group-hover:scale-105 group-hover:opacity-100"
+              />
+            )}
+          </>
         ) : (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-cream to-blush/20 text-center px-6">
             <span className="font-serif text-2xl text-cacao mb-2">Emanella</span>

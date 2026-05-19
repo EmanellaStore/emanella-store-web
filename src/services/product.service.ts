@@ -283,15 +283,24 @@ export async function getProductBySlug(slug: string) {
 }
 
 export async function getFeaturedProducts(limit = 4) {
-  return db.product.findMany({
+  const products = await db.product.findMany({
     where: { isActive: true },
     include: {
       variants: { orderBy: { price: "asc" }, take: 1 },
-      images: { orderBy: { position: "asc" }, take: 1 },
+      images: { orderBy: { position: "asc" }, take: 2 },
     },
     orderBy: { createdAt: "desc" },
-    take: limit,
+    take: Math.max(12, limit * 3), // Fetch extra products to allow variety
   });
+
+  // Shuffle the products array
+  const shuffled = [...products];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+
+  return shuffled.slice(0, limit);
 }
 
 export async function getAllCategories() {

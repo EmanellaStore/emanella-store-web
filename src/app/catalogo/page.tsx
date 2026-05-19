@@ -55,7 +55,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                 orderBy: {
                     position: "asc",
                 },
-                take: 1,
+                take: 2,
             },
         },
         orderBy: {
@@ -68,6 +68,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
         name: product.name,
         slug: product.slug,
         imageUrl: product.images[0]?.imageUrl || null,
+        hoverImageUrl: product.images[1]?.imageUrl || null,
         category: product.category,
         minPrice: product.variants.length > 0 ? Number(product.variants[0].price) : 0,
     }));
@@ -156,6 +157,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                                 name={product.name}
                                 slug={product.slug}
                                 imageUrl={product.imageUrl}
+                                hoverImageUrl={product.hoverImageUrl}
                                 category={product.category}
                                 price={product.minPrice}
                             />

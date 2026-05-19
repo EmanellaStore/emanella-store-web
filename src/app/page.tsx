@@ -51,6 +51,7 @@ export default async function HomePage() {
                 name={product.name}
                 slug={product.slug}
                 imageUrl={product.images[0]?.imageUrl || null}
+                hoverImageUrl={product.images[1]?.imageUrl || null}
                 category={product.category}
                 price={product.variants[0]?.price ? Number(product.variants[0].price) : 0}
               />

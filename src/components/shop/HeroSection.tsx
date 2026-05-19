@@ -10,6 +10,7 @@ export default function HeroSection() {
                 alt="Emanella Store Hero"
                 fill
                 priority
+                sizes="100vw"
                 className="object-cover object-center md:object-right-top"
             />
 
