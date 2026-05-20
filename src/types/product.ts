@@ -4,6 +4,7 @@ export interface ProductVariantInput {
   attributeName: string;
   attributeValue: string;
   price: number;
+  originalPrice?: number | null;
   stock: number;
 }
 
@@ -40,6 +41,7 @@ export interface ProductVariantOutput {
   attributeName: string;
   attributeValue: string;
   price: number;
+  originalPrice: number | null;
   stock: number;
 }
 
@@ -49,11 +51,12 @@ export interface ProductImageOutput {
   position: number;
 }
 
-export type Category = "perfumes" | "bolsos" | "accesorios" | "zapatos";
+export type Category = "perfumes" | "bolsos" | "accesorios" | "zapatos" | "combos";
 
 export const CATEGORIES: { value: Category; label: string }[] = [
   { value: "perfumes", label: "Perfumes" },
   { value: "bolsos", label: "Bolsos" },
   { value: "accesorios", label: "Accesorios" },
   { value: "zapatos", label: "Zapatos" },
+  { value: "combos", label: "Combos Especiales" },
 ];

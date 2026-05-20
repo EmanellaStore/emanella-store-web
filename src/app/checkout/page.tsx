@@ -27,24 +27,24 @@ function CheckoutContent() {
   const [prefillCity, setPrefillCity] = useState("");
   const [prefillAddress, setPrefillAddress] = useState("");
 
-  // ===== CUPONES =====
-  const [couponCode, setCouponCode] = useState("");
-  const [appliedCoupon, setAppliedCoupon] = useState<{
-    code: string;
-    discount: number;
-    freeShipping: boolean;
-  } | null>(null);
+// ===== CUPONES =====
+  const couponCode = useCartStore((state) => state.couponCode);
+  const discount = useCartStore((state) => state.discount);
+  const setCoupon = useCartStore((state) => state.setCoupon);
+  const clearCoupon = useCartStore((state) => state.clearCoupon);
+
+  const [couponInput, setCouponInput] = useState("");
   const [couponError, setCouponError] = useState("");
   const [couponLoading, setCouponLoading] = useState(false);
 
   // ===== TOTALES =====
-  const subtotal = useMemo(() => getTotal(), [getTotal, items]);
+  const subtotal = useMemo(() => items.reduce((t, i) => t + i.price * i.quantity, 0), [items]);
   const shipping = useMemo(() => {
-    if (appliedCoupon?.freeShipping) return 0;
+    // Aquí podrías agregar lógica si hay cupones de "FREE_SHIPPING", por ahora calculamos estándar
     if (subtotal >= FREE_SHIPPING_THRESHOLD) return 0;
     return SHIPPING_COST;
-  }, [subtotal, appliedCoupon]);
-  const discount = appliedCoupon?.discount ?? 0;
+  }, [subtotal]);
+  
   const total = Math.max(0, subtotal + shipping - discount);
   const searchParams = useSearchParams();
 
@@ -68,8 +68,10 @@ function CheckoutContent() {
   // pre-cargar cupón desde URL ?c=CODIGO
   useEffect(() => {
     const couponFromUrl = searchParams.get("c");
-    if (couponFromUrl && !appliedCoupon) {
-      setCouponCode(couponFromUrl.toUpperCase());
+    if (couponFromUrl && !couponCode) {
+      setCouponInput(couponFromUrl.toUpperCase());
+      // Disparamos la validación de una vez
+      validateCouponApi(couponFromUrl.toUpperCase());
     }
   }, [searchParams]);
 
@@ -98,8 +100,7 @@ function CheckoutContent() {
   }, [searchParams]);
 
   // ===== CUPÓN: aplicar / quitar =====
-  const applyCoupon = async () => {
-    if (!couponCode.trim()) return;
+  const validateCouponApi = async (codeToValidate: string) => {
     setCouponLoading(true);
     setCouponError("");
     try {
@@ -107,7 +108,7 @@ function CheckoutContent() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          code: couponCode.trim().toUpperCase(),
+          code: codeToValidate.trim().toUpperCase(),
           subtotal,
           customerId: customerId || null,
         }),
@@ -115,13 +116,10 @@ function CheckoutContent() {
       const data = await res.json();
       if (!data.valid) {
         setCouponError(data.error || "Cupón no válido");
-        setAppliedCoupon(null);
+        clearCoupon();
       } else {
-        setAppliedCoupon({
-          code: data.coupon.code,
-          discount: data.discount,
-          freeShipping: data.coupon.type === "FREE_SHIPPING",
-        });
+        setCoupon(data.coupon.code, data.discount);
+        setCouponInput("");
       }
     } catch {
       setCouponError("Error validando cupón");
@@ -130,9 +128,14 @@ function CheckoutContent() {
     }
   };
 
+  const applyCoupon = () => {
+    if (!couponInput.trim()) return;
+    validateCouponApi(couponInput);
+  };
+
   const removeCoupon = () => {
-    setAppliedCoupon(null);
-    setCouponCode("");
+    clearCoupon();
+    setCouponInput("");
     setCouponError("");
   };
 
@@ -164,7 +167,7 @@ function CheckoutContent() {
           data,
           items,
           sessionId,
-          couponCode: appliedCoupon?.code,
+          couponCode: couponCode,
         }),
       });
       const result = await res.json();
@@ -294,19 +297,20 @@ function CheckoutContent() {
               <p className="font-sans text-xs uppercase tracking-widest text-cacao">
                 ¿Tienes un cupón?
               </p>
-              {!appliedCoupon ? (
+              {!couponCode ? (
                 <div className="flex gap-2">
                   <input
                     type="text"
-                    value={couponCode}
-                    onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                    value={couponInput}
+                    onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
                     placeholder="Código"
                     className="flex-1 border border-blush/50 bg-cream px-3 py-2 text-sm outline-none focus:border-gold uppercase"
+                    onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), applyCoupon())}
                   />
                   <button
                     type="button"
                     onClick={applyCoupon}
-                    disabled={couponLoading || !couponCode.trim()}
+                    disabled={couponLoading || !couponInput.trim()}
                     className="px-4 py-2 bg-cacao text-cream text-xs uppercase tracking-widest disabled:opacity-50"
                   >
                     {couponLoading ? "..." : "Aplicar"}
@@ -315,7 +319,7 @@ function CheckoutContent() {
               ) : (
                 <div className="flex justify-between items-center bg-green-50 border border-green-200 px-3 py-2">
                   <span className="text-xs text-green-700 font-bold">
-                    ✓ {appliedCoupon.code}
+                    ✓ {couponCode}
                   </span>
                   <button
                     type="button"

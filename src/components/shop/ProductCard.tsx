@@ -8,6 +8,7 @@ interface ProductCardProps {
   hoverImageUrl?: string | null;
   category: string;
   price: number;
+  originalPrice?: number | null;
 }
 
 function formatCategory(category: string) {
@@ -21,12 +22,24 @@ export default function ProductCard({
   hoverImageUrl,
   category,
   price,
+  originalPrice,
 }: ProductCardProps) {
   const hasImage = Boolean(imageUrl && imageUrl.trim() !== "");
+  const hasDiscount = Boolean(originalPrice && originalPrice > price);
+  const discountPercent = hasDiscount
+    ? Math.round(((originalPrice! - price) / originalPrice!) * 100)
+    : 0;
 
   return (
     <Link href={`/producto/${slug}`} className="group block h-full flex flex-col">
       <div className="relative aspect-[3/4] bg-white/5 rounded-2xl overflow-hidden mb-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] border border-white/5 transition-all duration-500 group-hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.2)] group-hover:-translate-y-1">
+        {/* Badge de Oferta */}
+        {hasDiscount && (
+          <div className="absolute top-4 right-4 bg-gold text-white font-sans text-[10px] tracking-wider font-bold px-2.5 py-1 rounded-full shadow-md z-10 border border-white/10 animate-pulse">
+            -{discountPercent}% OFF
+          </div>
+        )}
+
         {hasImage ? (
           <>
             <Image
@@ -57,7 +70,7 @@ export default function ProductCard({
           </div>
         )}
 
-        {/* Etiqueta de Nuevo/Destacado (adaptada a modo oscuro pastel) */}
+        {/* Etiqueta de Vista Rápida */}
         <div className="absolute top-4 left-4 bg-warm-black/60 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300">
            <span className="font-sans text-[9px] tracking-wider uppercase text-cacao font-medium">Vista rápida</span>
         </div>
@@ -72,9 +85,21 @@ export default function ProductCard({
         <h3 className="font-serif text-xl text-cacao transition-colors duration-300 line-clamp-2 leading-tight">
           {name}
         </h3>
-        <p className="font-sans text-sm text-gold-dark font-medium mt-auto pt-2">
-          Desde ${price.toLocaleString("es-CO")}
-        </p>
+        
+        {hasDiscount ? (
+          <div className="flex items-center justify-center gap-2 mt-auto pt-2">
+            <span className="font-sans text-xs text-warm-gray/60 line-through">
+              ${originalPrice!.toLocaleString("es-CO")}
+            </span>
+            <span className="font-sans text-sm text-gold-dark font-semibold">
+              ${price.toLocaleString("es-CO")}
+            </span>
+          </div>
+        ) : (
+          <p className="font-sans text-sm text-gold-dark font-medium mt-auto pt-2">
+            Desde ${price.toLocaleString("es-CO")}
+          </p>
+        )}
       </div>
     </Link>
   );

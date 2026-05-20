@@ -75,7 +75,7 @@ export default function Navbar() {
             {[
               { name: "Inicio", path: "/" },
               { name: "Tienda", path: "/catalogo" },
-              { name: "Ofertas", path: "/catalogo?ofertas=true" },
+              { name: "Ofertas", path: "/ofertas" },
               { name: "Sobre Nosotros", path: "/sobre-nosotros" },
               { name: "Contacto", path: "/contacto" },
             ].map((item) => (

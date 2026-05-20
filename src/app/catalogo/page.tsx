@@ -78,6 +78,9 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
         hoverImageUrl: product.images[1]?.imageUrl || null,
         category: product.category,
         minPrice: product.variants.length > 0 ? Number(product.variants[0].price) : 0,
+        originalPrice: product.variants.length > 0 && product.variants[0].originalPrice 
+            ? Number(product.variants[0].originalPrice) 
+            : null,
     }));
 
     return (
@@ -167,6 +170,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                                 hoverImageUrl={product.hoverImageUrl}
                                 category={product.category}
                                 price={product.minPrice}
+                                originalPrice={product.originalPrice}
                             />
                         ))}
                     </div>

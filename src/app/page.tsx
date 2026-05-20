@@ -54,6 +54,7 @@ export default async function HomePage() {
                 hoverImageUrl={product.images[1]?.imageUrl || null}
                 category={product.category}
                 price={product.variants[0]?.price ? Number(product.variants[0].price) : 0}
+                originalPrice={product.variants[0]?.originalPrice ? Number(product.variants[0].originalPrice) : null}
               />
             ))}
           </div>

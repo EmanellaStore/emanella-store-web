@@ -10,6 +10,7 @@ interface Variant {
   attributeName: string;
   attributeValue: string;
   price: number;
+  originalPrice?: number | null;
   stock: number;
 }
 
@@ -30,7 +31,7 @@ interface ProductFormProps {
     category?: string;
     description?: string | null;
     isActive?: boolean;
-    variants?: { sku: string; attributeName: string; attributeValue: string; price: number | string; stock: number }[];
+    variants?: { sku: string; attributeName: string; attributeValue: string; price: number | string; originalPrice?: number | string | null; stock: number }[];
     images?: { imageUrl: string; position: number }[];
   };
   onSubmit: (data: ProductFormData) => Promise<void>;
@@ -44,9 +45,12 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
     category: product?.category || "perfumes",
     description: product?.description || "",
     isActive: product?.isActive ?? true,
-    variants: (product?.variants || [{ sku: "", attributeName: "Tamaño", attributeValue: "", price: 0, stock: 0 }]).map((v) => ({
+    variants: (product?.variants || [{ sku: "", attributeName: "Tamaño", attributeValue: "", price: 0, originalPrice: null, stock: 0 }]).map((v) => ({
       ...v,
       price: typeof v.price === "string" ? parseFloat(v.price) || 0 : v.price,
+      originalPrice: v.originalPrice !== undefined && v.originalPrice !== null
+        ? (typeof v.originalPrice === "string" ? parseFloat(v.originalPrice) || null : v.originalPrice)
+        : null,
     })),
     images: product?.images || [],
   });
@@ -74,7 +78,7 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
     }));
   };
 
-  const handleVariantChange = (index: number, field: string, value: string | number) => {
+  const handleVariantChange = (index: number, field: string, value: string | number | null) => {
     setFormData((prev) => {
       const newVariants = prev.variants.map((v, i) => {
         if (i !== index) return v;
@@ -96,7 +100,7 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
         ...prev,
         variants: [
           ...prev.variants,
-          { sku: newSku, attributeName: "Tamaño", attributeValue: "", price: 0, stock: 0 },
+          { sku: newSku, attributeName: "Tamaño", attributeValue: "", price: 0, originalPrice: null, stock: 0 },
         ],
       };
     });
@@ -174,6 +178,9 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
           attributeName: v.attributeName,
           attributeValue: v.attributeValue,
           price: typeof v.price === "string" ? parseFloat(v.price) : v.price,
+          originalPrice: v.originalPrice !== undefined && v.originalPrice !== null && String(v.originalPrice).trim() !== ""
+            ? (typeof v.originalPrice === "string" ? parseFloat(v.originalPrice) || null : v.originalPrice)
+            : null,
           stock: v.stock,
         })),
         images: formData.images,
@@ -362,7 +369,7 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
                 )}
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
                 <div>
                   <label className="block text-[10px] uppercase tracking-widest text-warm-gray mb-1">
                     SKU
@@ -415,6 +422,21 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
                     onChange={(e) => handleVariantChange(index, "price", parseFloat(e.target.value) || 0)}
                     className={`w-full border p-2 outline-none focus:border-gold text-sm ${errors[`variant_${index}_price`] ? "border-red-500" : "border-blush/50"} bg-white/50`}
                     placeholder="189000"
+                    min="0"
+                    step="100"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] uppercase tracking-widest text-warm-gray mb-1">
+                    Precio Orig. (Opt)
+                  </label>
+                  <input
+                    type="number"
+                    value={variant.originalPrice || ""}
+                    onChange={(e) => handleVariantChange(index, "originalPrice", e.target.value ? parseFloat(e.target.value) : null)}
+                    className="w-full border border-blush/50 p-2 outline-none focus:border-gold text-sm bg-white/50"
+                    placeholder="239000"
                     min="0"
                     step="100"
                   />
