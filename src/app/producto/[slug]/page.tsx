@@ -67,7 +67,8 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
                                 id: product.id,
                                 name: product.name,
                                 slug: product.slug,
-                                imageUrl: product.images[0]?.imageUrl || null
+                                imageUrl: product.images[0]?.imageUrl || null,
+                                category: product.category
                             }}
                             variants={product.variants.map((v) => ({
                                 id: v.id,

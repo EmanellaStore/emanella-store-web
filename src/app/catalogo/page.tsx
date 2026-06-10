@@ -1,6 +1,7 @@
 import { Navbar, ProductCard, Footer } from "@/components/shop";
 import db from "@/lib/db";
 import Link from "next/link";
+import CatalogSearchTracker from "./CatalogSearchTracker";
 
 type CatalogPageProps = {
     searchParams?: Promise<{
@@ -66,6 +67,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
     // Mezclar los productos aleatoriamente (Fisher-Yates shuffle)
     const shuffledProducts = [...products];
     for (let i = shuffledProducts.length - 1; i > 0; i--) {
+        // eslint-disable-next-line react-hooks/purity
         const j = Math.floor(Math.random() * (i + 1));
         [shuffledProducts[i], shuffledProducts[j]] = [shuffledProducts[j], shuffledProducts[i]];
     }
@@ -86,6 +88,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
     return (
         <main className="min-h-screen bg-cream">
             <Navbar />
+            <CatalogSearchTracker query={q} />
 
             <section className="pt-28 pb-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
                 <div className="text-center mb-10">

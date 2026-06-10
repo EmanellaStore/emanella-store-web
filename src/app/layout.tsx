@@ -1,8 +1,7 @@
-//src/app/layaout.tsx
 import type { Metadata } from "next";
 import "./globals.css";
 import { WhatsAppButton } from "@/components/shop/WhatsAppButton";
-import { ToastContainer } from "@/components/shop";
+import { ToastContainer, AnalyticsScripts, AnalyticsRouteObserver } from "@/components/shop";
 import CartSyncProvider from "@/components/shop/CartSyncProvider";
 import WelcomeCaptureModal from "@/components/shop/WelcomeCaptureModel";
 
@@ -24,6 +23,8 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body>
+        <AnalyticsScripts />
+        <AnalyticsRouteObserver />
         {children}
         <ToastContainer />
         <WhatsAppButton />

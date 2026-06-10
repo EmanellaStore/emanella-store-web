@@ -92,3 +92,18 @@ src/
   flows/
 prisma/
 ```
+
+## Analytics
+
+El proyecto implementa el seguimiento para Meta Pixel. (Las integraciones de Google Analytics 4 y Meta Conversion API se encuentran deshabilitadas/comentadas en el código a petición).
+
+**Eventos registrados (Pixel):**
+- `PageView`: Vistas de todas las rutas de la app.
+- `ViewContent`: Vistas al detalle de un producto.
+- `AddToCart`: Adiciones al carrito.
+- `InitiateCheckout`: Inicio del flujo de pago.
+- `Purchase`: Finalización de la compra.
+- `Contact`: Clics en el botón flotante de WhatsApp.
+- `Search`: Búsquedas en el catálogo.
+- `CompleteRegistration`: Registro exitoso en el formulario de descuento.
+- `Lead`: Captura de lead a través del formulario de descuento.

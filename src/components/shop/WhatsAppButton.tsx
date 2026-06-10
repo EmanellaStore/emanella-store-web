@@ -1,9 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { trackContact } from "@/lib/analytics";
+import { useCartStore } from "@/store/useCartStore";
 
 export default function WhatsAppButton() {
   const [visible, setVisible] = useState(false);
+  const phoneState = useCartStore((state) => state.phone);
 
   // Aparece con un pequeño delay para no pelear con el render inicial
   useEffect(() => {
@@ -15,9 +18,14 @@ export default function WhatsAppButton() {
   const message = process.env.NEXT_PUBLIC_WHATSAPP_MESSAGE ?? "Hola!";
   const href = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 
+  const handleClick = () => {
+    trackContact("Botón Flotante de WhatsApp", { phone: phoneState || undefined });
+  };
+
   return (
     <a
       href={href}
+      onClick={handleClick}
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Contactar por WhatsApp"

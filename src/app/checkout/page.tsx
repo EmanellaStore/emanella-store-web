@@ -4,6 +4,7 @@ import { Suspense, useState, useEffect, useMemo } from "react";
 import { useCartStore } from "@/store/useCartStore";
 import { Navbar, Footer } from "@/components/shop";
 import { useRouter, useSearchParams } from "next/navigation";
+import { trackInitiateCheckout } from "@/lib/analytics";
 
 const SHIPPING_COST = 15000;
 const FREE_SHIPPING_THRESHOLD = 200000;
@@ -15,6 +16,7 @@ function CheckoutContent() {
   const sessionId = useCartStore((state) => state.sessionId);
   const customerId = useCartStore((state) => state.customerId);
   const setContact = useCartStore((state) => state.setContact);
+  const phone = useCartStore((state) => state.phone);
   const router = useRouter();
 
   const [loading, setLoading] = useState(false);
@@ -64,6 +66,24 @@ function CheckoutContent() {
     if (isRestoring || submitted || loading) return;
     if (items.length === 0) router.replace("/catalogo");
   }, [items.length, submitted, loading, isRestoring, router]);
+
+  // Track InitiateCheckout when the cart restoration finishes and items exist
+  useEffect(() => {
+    if (!isRestoring && items.length > 0) {
+      trackInitiateCheckout(
+        items.map((i) => ({
+          id: i.variantId,
+          name: i.name,
+          price: i.price,
+          quantity: i.quantity,
+          slug: i.slug,
+        })),
+        total,
+        couponCode || undefined,
+        { phone: phone || undefined }
+      );
+    }
+  }, [isRestoring, items, total, couponCode, phone]);
 
   // pre-cargar cupón desde URL ?c=CODIGO
   useEffect(() => {

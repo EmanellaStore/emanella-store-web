@@ -3,6 +3,7 @@ import { OrderStatus, Prisma } from "@prisma/client";
 import { CartItem } from "@/store/useCartStore";
 import { notifyOrderStatusChange } from "@/lib/webhooks";
 import db from "@/lib/db";
+import { sendMetaCapiEvent } from "./capi.service";
 
 interface CheckoutData {
   name: string;
@@ -19,6 +20,13 @@ interface CheckoutResult {
   error?: string;
 }
 
+interface TrackingInfo {
+  ip?: string;
+  userAgent?: string;
+  fbc?: string;
+  fbp?: string;
+}
+
 const SHIPPING_COST = 15000;
 const FREE_SHIPPING_THRESHOLD = 200000;
 
@@ -26,7 +34,8 @@ export async function createOrder(
   data: CheckoutData,
   cartItems: CartItem[],
   sessionId: string,
-  couponCode?: string
+  couponCode?: string,
+  trackingInfo?: TrackingInfo
 ): Promise<CheckoutResult> {
   try {
     // 1) Upsert del cliente
@@ -168,6 +177,37 @@ export async function createOrder(
         },
       });
     }
+
+    // 9) Trigger Meta Conversion API (CAPI) for Purchase
+    // if (order) {
+    //   sendMetaCapiEvent({
+    //     eventName: "Purchase",
+    //     eventId: order.id,
+    //     eventUrl: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/gracias?orderId=${order.id}`,
+    //     userData: {
+    //       phone: customer.phone,
+    //       firstName: customer.name,
+    //       city: customer.city || "",
+    //       ip: trackingInfo?.ip,
+    //       userAgent: trackingInfo?.userAgent,
+    //       fbp: trackingInfo?.fbp,
+    //       fbc: trackingInfo?.fbc,
+    //     },
+    //     customData: {
+    //       value: Number(order.totalAmount),
+    //       currency: "COP",
+    //       contentIds: cartItems.map((item) => item.productId),
+    //       contentType: "product",
+    //       contents: cartItems.map((item) => ({
+    //         id: item.productId,
+    //         quantity: item.quantity,
+    //         item_price: Number(item.price),
+    //       })),
+    //       numItems: cartItems.reduce((acc, item) => acc + item.quantity, 0),
+    //       coupon: order.appliedCouponCode || undefined,
+    //     },
+    //   }).catch((e) => console.error("Error triggering CAPI Purchase:", e));
+    // }
 
     return { success: true, orderId: order.id };
   } catch (error) {

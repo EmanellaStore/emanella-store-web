@@ -1,8 +1,9 @@
 //src/components/shop/AddCartSection.tsx
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useCartStore, CartItem } from "@/store/useCartStore";
 import { useToastStore } from "@/store/useToastStore";
+import { trackViewContent, trackAddToCart } from "@/lib/analytics";
 
 interface Variant {
     id: string;
@@ -19,6 +20,7 @@ interface AddToCartSectionProps {
         name: string;
         slug: string;
         imageUrl?: string | null;
+        category?: string;
     };
     variants: Variant[];
 }
@@ -26,8 +28,20 @@ interface AddToCartSectionProps {
 export default function AddToCartSection({ product, variants }: AddToCartSectionProps) {
     const [selectedVariant, setSelectedVariant] = useState<Variant>(variants[0]);
     const addItem = useCartStore((state) => state.addItem);
+    const phone = useCartStore((state) => state.phone);
     const [isAdding, setIsAdding] = useState(false);
     const showToast = useToastStore((s) => s.showToast);
+
+    useEffect(() => {
+        trackViewContent({
+            id: product.id,
+            name: product.name,
+            price: Number(selectedVariant.price),
+            category: product.category || "General",
+            slug: product.slug
+        }, { phone: phone || undefined });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [product.id]);
 
     const handleAddToCart = () => {
         setIsAdding(true);
@@ -45,6 +59,17 @@ export default function AddToCartSection({ product, variants }: AddToCartSection
         };
 
         addItem(item);
+
+        // Track AddToCart
+        trackAddToCart({
+            id: item.variantId,
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity,
+            category: product.category,
+            slug: item.slug
+        }, { phone: phone || undefined });
+
         showToast({
             title: "1 Artículo agregado",
             description: product.name,
@@ -54,6 +79,7 @@ export default function AddToCartSection({ product, variants }: AddToCartSection
         // Feedback visual rápido
         setTimeout(() => setIsAdding(false), 800);
     };
+
 
     return (
         <div className="space-y-10">

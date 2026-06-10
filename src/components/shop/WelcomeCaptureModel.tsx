@@ -2,6 +2,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useCartStore } from '@/store/useCartStore';
+import { trackCompleteRegistration, trackLead } from '@/lib/analytics';
 
 export default function WelcomeCaptureModal() {
   const { items, phone, setContact } = useCartStore();
@@ -12,7 +13,8 @@ export default function WelcomeCaptureModal() {
   useEffect(() => {
     const dismissed = localStorage.getItem('welcome_dismissed');
     if (!dismissed && !phone && items.length >= 2) {
-      setShow(true);
+      const timer = setTimeout(() => setShow(true), 0);
+      return () => clearTimeout(timer);
     }
   }, [items.length, phone]);
 
@@ -30,9 +32,15 @@ export default function WelcomeCaptureModal() {
     });
     const data = await res.json();
     setContact({ phone: phoneInput, customerId: data.customer.id });
+    
+    // Track Lead & CompleteRegistration
+    trackCompleteRegistration("Welcome Coupon Modal", { name, phone: phoneInput });
+    trackLead("Welcome Coupon", "Formulario de Descuento", { name, phone: phoneInput });
+
     localStorage.setItem('welcome_dismissed', '1');
     setShow(false);
   };
+
 
   const dismiss = () => {
     localStorage.setItem('welcome_dismissed', '1');
