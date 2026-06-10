@@ -11,16 +11,22 @@
 @import "@fontsource/jost/600.css";
 
 @theme {
-  /* ── Colores Emanella Store ── */
-  --color-cream: #FAF7F2;
-  --color-gold: #B8860B;
-  --color-gold-dark: #8B6508;
-  --color-gold-light: #D4A017;
-  --color-cacao: #3D2B1F;
-  --color-cacao-light: #5C4033;
-  --color-blush: #E8C4B8;
-  --color-warm-gray: #8C7B6B;
-  --color-warm-black: #1C1410;
+  /* ── Colores Emanella Store (Estética Purple & Lilac Dark Mode) ── */
+  /* Fondos (Violeta profundo / Negro Berenjena) */
+  --color-cream: #1A1625; /* Fondo principal: Eggplant charcoal */
+  --color-beige: #241F33; /* Fondo secundario: Violet charcoal un poco más claro */
+  
+  /* Acentos (Gama de Lilas y Lavanda) */
+  --color-gold: #B197FC; /* Lilas suave principal (Elegante y místico) */
+  --color-gold-dark: #9477E5; /* Lavanda más intenso para hovers */
+  --color-blush: #D1C4E9; /* Lavanda pálido (reemplaza el rosa bebé) */
+  --color-blush-dark: #B39DDB;
+  
+  /* Textos (Blancos lavanda y grises violeta) */
+  --color-cacao: #F3E5F5; /* Texto principal: Blanco con un toque mínimo de violeta */
+  --color-cacao-light: #BDB7C9; /* Texto secundario: Gris lila suave */
+  --color-warm-gray: #8B8699; /* Gris medio para bordes e iconos */
+  --color-warm-black: #0F0D14; /* Negro obsidiana profundo para Footer y Navbar */
 
   /* ── Tipografías ── */
   --font-serif: "Cormorant Garamond", Georgia, serif;
@@ -28,8 +34,8 @@
 }
 
 body {
-  background-color: #FAF7F2;
-  color: #1C1410;
+  background-color: var(--color-cream);
+  color: var(--color-cacao); /* Actualizado para que el texto base sea claro */
   font-family: "Jost", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
 }

@@ -4,15 +4,58 @@ import { useCartStore } from "@/store/useCartStore";
 import { Navbar, Footer } from "@/components/shop";
 import Image from "next/image";
 import Link from "next/link";
-import { Trash2, Plus, Minus } from "lucide-react";
+import { Trash2, Plus, Minus, Tag, X } from "lucide-react";
+import { useState } from "react";
 
 export default function CartPage() {
     const items = useCartStore((state) => state.items);
     const removeItem = useCartStore((state) => state.removeItem);
     const updateQuantity = useCartStore((state) => state.updateQuantity);
     const getTotal = useCartStore((state) => state.getTotal);
+    
+    // Cupones
+    const couponCode = useCartStore((state) => state.couponCode);
+    const discount = useCartStore((state) => state.discount);
+    const setCoupon = useCartStore((state) => state.setCoupon);
+    const clearCoupon = useCartStore((state) => state.clearCoupon);
 
+    const [couponInput, setCouponInput] = useState("");
+    const [validating, setValidating] = useState(false);
+    const [couponError, setCouponError] = useState<string | null>(null);
+
+    const subtotal = items.reduce((t, i) => t + i.price * i.quantity, 0);
     const total = getTotal();
+
+    const handleApplyCoupon = async () => {
+        if (!couponInput.trim()) return;
+        setValidating(true);
+        setCouponError(null);
+
+        try {
+            const res = await fetch("/api/coupons/validate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ code: couponInput.trim(), subtotal }),
+            });
+
+            const data = await res.json();
+            if (data.valid) {
+                setCoupon(data.coupon.code, data.discount);
+                setCouponInput("");
+            } else {
+                setCouponError(data.error || "Cupón inválido o expirado");
+            }
+        } catch (error) {
+            setCouponError("Error al verificar el cupón");
+        } finally {
+            setValidating(false);
+        }
+    };
+
+    const handleRemoveCoupon = () => {
+        clearCoupon();
+        setCouponError(null);
+    };
 
     if (items.length === 0) {
         return (
@@ -61,6 +104,7 @@ export default function CartPage() {
                                             src={item.imageUrl}
                                             alt={item.name}
                                             fill
+                                            sizes="96px"
                                             className="object-cover"
                                         />
                                     ) : (
@@ -121,27 +165,84 @@ export default function CartPage() {
 
                     {/* Resumen del pedido */}
                     <div className="lg:col-span-1">
-                        <div className="bg-white/50 border border-blush/20 p-8 sticky top-32">
+                        <div className="bg-beige border border-blush/20 p-8 sticky top-32">
                             <h2 className="font-serif text-2xl text-cacao mb-6">Resumen</h2>
 
                             <div className="space-y-3 mb-6 font-sans text-sm">
                                 <div className="flex justify-between text-warm-gray">
                                     <span>Subtotal</span>
-                                    <span>${total.toLocaleString("es-CO")}</span>
+                                    <span>${subtotal.toLocaleString("es-CO")}</span>
                                 </div>
+                                
+                                {discount > 0 && couponCode && (
+                                    <div className="flex justify-between text-gold font-medium items-center">
+                                        <div className="flex items-center gap-1.5">
+                                            <Tag size={12} />
+                                            <span className="uppercase text-[10px] tracking-wider">{couponCode}</span>
+                                        </div>
+                                        <span>-${discount.toLocaleString("es-CO")}</span>
+                                    </div>
+                                )}
+
                                 <div className="flex justify-between text-warm-gray">
                                     <span>Envío</span>
                                     <span className="text-gold">A coordinar</span>
                                 </div>
-                                <div className="border-t border-blush/30 pt-3 flex justify-between font-medium text-cacao text-base">
-                                    <span>Total</span>
+
+                                <div className="border-t border-blush/30 pt-4 mt-2 flex justify-between font-medium text-cacao text-base">
+                                    <span>Total Final</span>
                                     <span>${total.toLocaleString("es-CO")}</span>
                                 </div>
                             </div>
 
+                            {/* Sección de Código de Cupón */}
+                            {!couponCode ? (
+                                <div className="mb-6">
+                                    <label className="block font-sans text-[10px] uppercase tracking-widest text-cacao mb-2">
+                                        ¿Tienes un cupón?
+                                    </label>
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            value={couponInput}
+                                            onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                                            placeholder="EJ: VIP20"
+                                            className="w-full bg-cream border border-blush/50 px-3 py-2.5 text-xs text-cacao outline-none focus:border-gold placeholder:text-warm-gray/50 font-sans tracking-widest uppercase"
+                                            onKeyDown={(e) => e.key === "Enter" && handleApplyCoupon()}
+                                        />
+                                        <button
+                                            onClick={handleApplyCoupon}
+                                            disabled={validating || !couponInput.trim()}
+                                            className="bg-cacao text-cream px-4 text-[10px] uppercase tracking-widest hover:bg-gold transition-colors disabled:bg-cacao/50"
+                                        >
+                                            {validating ? "..." : "Aplicar"}
+                                        </button>
+                                    </div>
+                                    {couponError && (
+                                        <p className="text-red-400 text-[10px] mt-2 font-sans">{couponError}</p>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="mb-6 bg-cream border border-gold/30 p-3 flex justify-between items-center rounded-sm">
+                                    <div>
+                                        <p className="font-sans text-[10px] uppercase tracking-widest text-gold font-semibold">
+                                            Cupón Aplicado
+                                        </p>
+                                        <p className="font-sans text-xs text-cacao mt-0.5">{couponCode}</p>
+                                    </div>
+                                    <button
+                                        onClick={handleRemoveCoupon}
+                                        className="text-warm-gray hover:text-red-400 p-1"
+                                        title="Quitar cupón"
+                                    >
+                                        <X size={14} />
+                                    </button>
+                                </div>
+                            )}
+
                             <Link
                                 href="/checkout"
-                                className="block w-full bg-gold text-cream text-center py-4 font-sans text-xs uppercase tracking-[0.3em] hover:bg-gold-dark transition-colors"
+                                className="block w-full bg-gold text-cream text-center py-4 font-sans text-xs uppercase tracking-[0.3em] hover:bg-gold-dark transition-colors mt-2"
                             >
                                 Finalizar pedido
                             </Link>

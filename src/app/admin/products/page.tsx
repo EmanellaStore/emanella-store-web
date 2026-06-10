@@ -190,7 +190,7 @@ export default function AdminProductsPage() {
                 setPage(1);
               }}
               placeholder="Buscar productos..."
-              className="w-full border border-blush/50 bg-white/70 pl-10 pr-4 py-3 text-sm text-cacao outline-none focus:border-gold"
+              className="w-full border border-blush/50 bg-beige pl-10 pr-4 py-3 text-sm text-cacao outline-none focus:border-gold"
             />
           </div>
 
@@ -200,7 +200,7 @@ export default function AdminProductsPage() {
               setCategoryFilter(e.target.value);
               setPage(1);
             }}
-            className="border border-blush/50 bg-white/70 px-4 py-3 text-sm text-cacao outline-none focus:border-gold"
+            className="border border-blush/50 bg-beige px-4 py-3 text-sm text-cacao outline-none focus:border-gold"
           >
             <option value="">Todas las categorías</option>
             {CATEGORIES.map((cat) => (
@@ -210,7 +210,7 @@ export default function AdminProductsPage() {
             ))}
           </select>
 
-          <label className="flex items-center gap-2 px-4 py-3 border border-blush/50 bg-white/70 cursor-pointer">
+          <label className="flex items-center gap-2 px-4 py-3 border border-blush/50 bg-beige cursor-pointer">
             <input
               type="checkbox"
               checked={showInactive}
@@ -255,7 +255,7 @@ export default function AdminProductsPage() {
           </div>
         )}
 
-        <div className="bg-white border border-blush/20 overflow-x-auto">
+        <div className="bg-beige border border-blush/20 overflow-x-auto">
           <table className="w-full text-left">
             <thead>
               <tr className="bg-cacao text-cream text-[10px] uppercase tracking-widest">
@@ -294,6 +294,7 @@ export default function AdminProductsPage() {
                             src={product.images[0].imageUrl}
                             alt={product.name}
                             fill
+                            sizes="64px"
                             className="object-cover"
                           />
                         ) : (

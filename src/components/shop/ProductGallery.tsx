@@ -71,6 +71,7 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
                 src={currentImage.imageUrl}
                 alt={`${productName} - Imagen ${currentIndex + 1}`}
                 fill
+                quality={100}
                 className="object-cover cursor-zoom-in transition-opacity duration-300"
                 onClick={() => openLightbox(currentIndex)}
                 priority={currentIndex === 0}
@@ -79,7 +80,7 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300" />
               <button
                 onClick={() => openLightbox(currentIndex)}
-                className="absolute top-4 right-4 p-2 bg-white/80 hover:bg-white text-cacao rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                className="absolute top-4 right-4 p-2 bg-warm-black/60 hover:bg-warm-black text-gold rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 backdrop-blur-md border border-white/10"
                 aria-label="Ver imagen completa"
               >
                 <ZoomIn size={20} />
@@ -91,14 +92,14 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
             <>
               <button
                 onClick={goToPrevious}
-                className="absolute left-4 top-1/2 -translate-y-1/2 p-2 bg-white/80 hover:bg-white text-cacao rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-lg"
+                className="absolute left-4 top-1/2 -translate-y-1/2 p-2 bg-warm-black/60 hover:bg-warm-black text-gold rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-lg backdrop-blur-md border border-white/10"
                 aria-label="Imagen anterior"
               >
                 <ChevronLeft size={24} />
               </button>
               <button
                 onClick={goToNext}
-                className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-white/80 hover:bg-white text-cacao rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-lg"
+                className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-warm-black/60 hover:bg-warm-black text-gold rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-lg backdrop-blur-md border border-white/10"
                 aria-label="Siguiente imagen"
               >
                 <ChevronRight size={24} />
@@ -138,6 +139,7 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
                   src={img.imageUrl}
                   alt={`${productName} - Miniatura ${idx + 1}`}
                   fill
+                  quality={90}
                   className="object-cover"
                   sizes="100px"
                 />
@@ -179,8 +181,9 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
               src={images[lightboxIndex].imageUrl}
               alt={`${productName} - Imagen ${lightboxIndex + 1}`}
               fill
+              quality={100}
               className="object-contain"
-              sizes="100vw"
+              sizes="(max-width: 1024px) 100vw, 896px"
               priority
             />
           </div>

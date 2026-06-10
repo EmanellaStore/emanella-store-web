@@ -8,6 +8,7 @@ export const ProductVariantSchema = z.object({
   attributeName: z.string().min(1, "Nombre del atributo requerido"),
   attributeValue: z.string().min(1, "Valor del atributo requerido"),
   price: z.number().min(0.01, "Precio debe ser mayor a 0"),
+  originalPrice: z.number().min(0.01, "Precio original debe ser mayor a 0").nullable().optional(),
   stock: z.number().int().min(0, "Stock no puede ser negativo").default(0),
 });
 
@@ -22,7 +23,7 @@ export const ProductSchema = z.object({
     /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
     "Slug debe contener solo letras minúsculas, números y guiones"
   ),
-  category: z.enum(["perfumes", "bolsos", "accesorios", "zapatos"]),
+  category: z.enum(["perfumes", "bolsos", "accesorios", "zapatos", "combos"]),
   description: z.string().min(10, "Descripción debe tener al menos 10 caracteres"),
   isActive: z.boolean().default(true),
   variants: z.array(ProductVariantSchema).min(1, "Al menos 1 variante requerida"),

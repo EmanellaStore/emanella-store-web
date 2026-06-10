@@ -103,14 +103,14 @@ export default function ResetPasswordPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link href="/" className="inline-block">
-            <span className="font-serif text-4xl font-semibold text-cacao tracking-widest">Emanella</span>
+            <span className="font-serif text-4xl font-semibold text-cacao tracking-widest">Emanella <span className="text-gold">Store</span></span>
           </Link>
           <p className="font-sans text-xs text-warm-gray mt-2 tracking-widest uppercase">
             {mode === "request" ? "Recuperar Contraseña" : "Nueva Contraseña"}
           </p>
         </div>
 
-        <div className="bg-white border border-blush/30 p-8">
+        <div className="bg-beige border border-blush/10 p-8 rounded-2xl shadow-lg shadow-black/20">
           {success && (
             <div className="bg-green-50 text-green-700 p-4 text-center text-sm mb-4">
               {success}

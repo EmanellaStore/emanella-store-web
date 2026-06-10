@@ -97,7 +97,7 @@ export default function AuthPage() {
         <div className="text-center mb-8">
           <Link href="/" className="inline-block">
             <span className="font-serif text-4xl font-semibold text-cacao tracking-widest">
-              Emanella
+              Emanella <span className="text-gold">Store</span>
             </span>
           </Link>
           <p className="font-sans text-xs text-warm-gray mt-2 tracking-widest uppercase">
@@ -105,7 +105,7 @@ export default function AuthPage() {
           </p>
         </div>
 
-        <div className="bg-white border border-blush/30 p-8">
+        <div className="bg-beige border border-blush/10 p-8 rounded-2xl shadow-lg shadow-black/20">
           {mode === "login" ? (
             <form onSubmit={handleLogin} className="space-y-4">
               <div>

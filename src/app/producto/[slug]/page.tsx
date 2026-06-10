@@ -54,10 +54,10 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
                         </h1>
 
                         <div className="mb-8">
-                            <h2 className="font-sans text-[10px] tracking-[0.2em] text-warm-gray uppercase mb-2">
+                            <h2 className="font-sans text-[10px] tracking-[0.2em] text-gold uppercase mb-2">
                                 Descripción
                             </h2>
-                            <p className="font-sans text-warm-gray leading-relaxed">
+                            <p className="font-sans text-cacao-light leading-relaxed">
                                 {product.description}
                             </p>
                         </div>
@@ -67,7 +67,8 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
                                 id: product.id,
                                 name: product.name,
                                 slug: product.slug,
-                                imageUrl: product.images[0]?.imageUrl || null
+                                imageUrl: product.images[0]?.imageUrl || null,
+                                category: product.category
                             }}
                             variants={product.variants.map((v) => ({
                                 id: v.id,
@@ -79,18 +80,18 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
                             }))}
                         />
 
-                        <div className="mt-10 pt-8 border-t border-blush/30">
+                        <div className="mt-10 pt-8 border-t border-blush/20">
                             <div className="grid grid-cols-2 gap-4 text-center">
-                                <div className="p-4 bg-white/50">
-                                    <p className="font-sans text-[10px] tracking-widest text-warm-gray uppercase mb-1">
+                                <div className="p-4 bg-beige border border-blush/10 rounded-xl">
+                                    <p className="font-sans text-[10px] tracking-widest text-gold uppercase mb-1">
                                         Envío
                                     </p>
                                     <p className="font-sans text-sm text-cacao">
                                         A coordinar
                                     </p>
                                 </div>
-                                <div className="p-4 bg-white/50">
-                                    <p className="font-sans text-[10px] tracking-widest text-warm-gray uppercase mb-1">
+                                <div className="p-4 bg-beige border border-blush/10 rounded-xl">
+                                    <p className="font-sans text-[10px] tracking-widest text-gold uppercase mb-1">
                                         Pago
                                     </p>
                                     <p className="font-sans text-sm text-cacao">
@@ -103,10 +104,13 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
                 </div>
             </section>
 
-            <section className="bg-white/30 py-20 border-t border-blush/20">
+            <section className="bg-warm-black/40 py-24 border-y border-blush/10">
                 <div className="max-w-3xl mx-auto px-4 text-center">
-                    <h2 className="font-serif text-3xl text-cacao mb-6 italic">Compromiso Emanella</h2>
-                    <p className="font-sans text-warm-gray font-light leading-relaxed">
+                    <span className="inline-block font-sans text-[10px] tracking-[0.4em] text-gold uppercase mb-4">
+                        Nuestra Promesa
+                    </span>
+                    <h2 className="font-serif text-3xl md:text-4xl text-cacao mb-8 italic">Compromiso Emanella</h2>
+                    <p className="font-sans text-cacao-light font-light leading-relaxed text-lg">
                         Cada uno de nuestros productos es seleccionado bajo los más altos estándares de calidad.
                         Nuestras fragancias son 100% originales y nuestros accesorios cuentan con acabados premium
                         para asegurar durabilidad y distinción.

@@ -1,6 +1,7 @@
 import { Navbar, ProductCard, Footer } from "@/components/shop";
 import db from "@/lib/db";
 import Link from "next/link";
+import CatalogSearchTracker from "./CatalogSearchTracker";
 
 type CatalogPageProps = {
     searchParams?: Promise<{
@@ -55,7 +56,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                 orderBy: {
                     position: "asc",
                 },
-                take: 1,
+                take: 2,
             },
         },
         orderBy: {
@@ -63,18 +64,31 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
         },
     });
 
-    const normalizedProducts = products.map((product) => ({
+    // Mezclar los productos aleatoriamente (Fisher-Yates shuffle)
+    const shuffledProducts = [...products];
+    for (let i = shuffledProducts.length - 1; i > 0; i--) {
+        // eslint-disable-next-line react-hooks/purity
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffledProducts[i], shuffledProducts[j]] = [shuffledProducts[j], shuffledProducts[i]];
+    }
+
+    const normalizedProducts = shuffledProducts.map((product) => ({
         id: product.id,
         name: product.name,
         slug: product.slug,
         imageUrl: product.images[0]?.imageUrl || null,
+        hoverImageUrl: product.images[1]?.imageUrl || null,
         category: product.category,
         minPrice: product.variants.length > 0 ? Number(product.variants[0].price) : 0,
+        originalPrice: product.variants.length > 0 && product.variants[0].originalPrice 
+            ? Number(product.variants[0].originalPrice) 
+            : null,
     }));
 
     return (
         <main className="min-h-screen bg-cream">
             <Navbar />
+            <CatalogSearchTracker query={q} />
 
             <section className="pt-28 pb-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
                 <div className="text-center mb-10">
@@ -96,7 +110,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                             name="q"
                             defaultValue={q}
                             placeholder="Buscar productos..."
-                            className="w-full border border-blush/50 bg-white/70 px-4 py-3 text-sm text-cacao outline-none focus:border-gold"
+                            className="w-full border border-blush/50 bg-beige px-4 py-3 text-sm text-cacao outline-none focus:border-gold"
                         />
                         {categoria ? <input type="hidden" name="categoria" value={categoria} /> : null}
                         <button
@@ -156,8 +170,10 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                                 name={product.name}
                                 slug={product.slug}
                                 imageUrl={product.imageUrl}
+                                hoverImageUrl={product.hoverImageUrl}
                                 category={product.category}
                                 price={product.minPrice}
+                                originalPrice={product.originalPrice}
                             />
                         ))}
                     </div>
