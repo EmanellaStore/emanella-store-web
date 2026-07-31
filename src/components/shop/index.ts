@@ -4,6 +4,8 @@ export { default as HeroSection } from "./HeroSection";
 export { default as AddToCartSection } from "./AddCartSection";
 export { default as ProductGallery } from "./ProductGallery";
 export { default as Footer } from "./Footer";
+export { default as CartDrawer } from "./CartDrawer";
+export { default as NewsletterSection } from "./NewsletterSection";
 export { default as ToastContainer } from "./ToastContainer";
 export { default as AnalyticsScripts } from "./AnalyticsScripts";
 export { default as AnalyticsRouteObserver } from "./AnalyticsRouteObserver";

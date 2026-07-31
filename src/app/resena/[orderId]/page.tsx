@@ -114,7 +114,7 @@ export default function ReviewPage() {
         <button
           onClick={submit}
           disabled={loading || !rating}
-          className="w-full bg-gold text-cream py-4 text-xs uppercase tracking-[0.3em] hover:bg-gold-dark transition-colors disabled:opacity-50"
+          className="w-full bg-warm-black text-on-dark py-4 text-xs uppercase tracking-[0.3em] hover:bg-gold-dark transition-colors disabled:opacity-50"
         >
           {loading ? 'Enviando...' : 'Enviar Reseña'}
         </button>

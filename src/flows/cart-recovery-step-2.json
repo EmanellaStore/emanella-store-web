@@ -23,13 +23,13 @@
     },
     {
       "parameters": {
-        "url": "http://localhost:3000/api/cart/abandoned?step=2",
+        "url": "http://host.docker.internal:3000/api/cart/abandoned?step=2",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "x-n8n-token",
-              "value": "25624e724c76f9e80260561e56623219b1f7285193d527a36c243d4ea4879c98"
+              "value": "ce3c1b4a71efebe97dac15328003ed85879930942613a1acc431757e0f4da018"
             }
           ]
         },
@@ -80,7 +80,7 @@
     },
     {
       "parameters": {
-        "functionCode": "const cart = $json;\nconst items = cart.items || [];\n\nconst enriched = items.map(i => ({\n  variantId: i.variantId,\n  name: i.variant?.product?.name || 'producto',\n  price: Number(i.unitPrice),\n  quantity: i.quantity,\n  imageUrl: i.variant?.product?.images?.[0]?.imageUrl || null,\n}));\n\nconst topProduct = enriched.sort((a, b) => b.price - a.price)[0] \n  || { name: 'producto seleccionado', price: 0 };\n\n// Nombre del cliente (si existe)\nconst customerName = cart.customer?.name || null;\n\n// Link de checkout que restaura el carrito\nconst checkoutUrl = `http://localhost:3000/checkout?cart=${cart.sessionId}`;\n\nreturn [{\n  cartId: cart.id,\n  sessionId: cart.sessionId,\n  customerId: cart.customerId,\n  phone: cart.phone,\n  name: customerName,\n  total: Number(cart.totalAmount),\n  items: enriched,\n  topProduct,\n  checkoutUrl,\n  step: 2,\n}];"
+        "functionCode": "const cart = $json;\nconst items = cart.items || [];\n\nconst enriched = items.map(i => ({\n  variantId: i.variantId,\n  name: i.variant?.product?.name || 'producto',\n  price: Number(i.unitPrice),\n  quantity: i.quantity,\n  imageUrl: i.variant?.product?.images?.[0]?.imageUrl || null,\n}));\n\nconst topProduct = enriched.sort((a, b) => b.price - a.price)[0] \n  || { name: 'producto seleccionado', price: 0 };\n\n// Nombre del cliente (si existe)\nconst customerName = cart.customer?.name || null;\n\n// Link de checkout que restaura el carrito\nconst checkoutUrl = `http://host.docker.internal:3000/checkout?cart=${cart.sessionId}`;\n\nreturn [{\n  cartId: cart.id,\n  sessionId: cart.sessionId,\n  customerId: cart.customerId,\n  phone: cart.phone,\n  name: customerName,\n  total: Number(cart.totalAmount),\n  items: enriched,\n  topProduct,\n  checkoutUrl,\n  step: 2,\n}];"
       },
       "id": "98f2f809-ea4d-48ab-ad0f-e5a080e89752",
       "name": "Get Top Product",
@@ -156,13 +156,13 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "http://localhost:3000/api/cart/mark-recovering",
+        "url": "http://host.docker.internal:3000/api/cart/mark-recovering",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "x-n8n-token",
-              "value": "25624e724c76f9e80260561e56623219b1f7285193d527a36c243d4ea4879c98"
+              "value": "ce3c1b4a71efebe97dac15328003ed85879930942613a1acc431757e0f4da018"
             },
             {
               "name": "Content-Type",

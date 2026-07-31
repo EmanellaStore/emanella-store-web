@@ -390,7 +390,7 @@ export default function OrderDetailPage() {
                   </button>
                   <button
                     onClick={saveItems}
-                    className="flex items-center gap-2 px-3 py-1 text-xs bg-gold text-cream hover:bg-gold-dark transition-colors"
+                    className="flex items-center gap-2 px-3 py-1 text-xs bg-warm-black text-on-dark hover:bg-gold-dark transition-colors"
                   >
                     <Save size={14} />
                     Guardar
@@ -450,7 +450,7 @@ export default function OrderDetailPage() {
                   <button
                     onClick={addNewItem}
                     disabled={!selectedVariantId}
-                    className="px-4 py-2 bg-gold text-cream text-sm hover:bg-gold-dark disabled:bg-warm-gray transition-colors"
+                    className="px-4 py-2 bg-warm-black text-on-dark text-sm hover:bg-gold-dark disabled:bg-warm-gray transition-colors"
                   >
                     <Plus size={16} />
                   </button>
@@ -787,7 +787,7 @@ export default function OrderDetailPage() {
               </button>
               <button
                 onClick={confirmShipping}
-                className="flex-1 px-4 py-2 bg-gold text-cream hover:bg-gold-dark text-sm"
+                className="flex-1 px-4 py-2 bg-warm-black text-on-dark hover:bg-gold-dark text-sm"
               >
                 Marcar como enviado
               </button>

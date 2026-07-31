@@ -1,26 +1,54 @@
 import Link from "next/link";
+import Image from "next/image";
 
 export default function Footer() {
   return (
-    <footer className="bg-warm-black text-cacao border-t border-gold/10">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-12 md:gap-8">
-          <div className="md:col-span-1">
-            <Link href="/" className="inline-block group">
-              <div className="flex items-center gap-1.5">
-                <span className="font-serif text-3xl font-medium tracking-wider text-cacao">Emanella <span className="text-gold">Store</span></span>
-              </div>
-              <span className="block font-sans text-[9px] uppercase tracking-[0.3em] text-cacao-light mt-2 transition-colors group-hover:text-gold">
-                Perfumería & Accesorios
-              </span>
+    <footer className="bg-warm-black text-on-dark border-t border-gold/10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="grid grid-cols-1 md:grid-cols-[1.4fr_1fr_1fr_1fr] gap-10 md:gap-8">
+          <div className="md:pr-10">
+            <Link href="/" aria-label="Emanella Perfumería — Inicio" className="inline-block">
+              {/* Logo blanco (el mismo del tema Shopify) */}
+              <Image
+                src="/logo-emanella-white.png"
+                alt="Emanella Perfumería"
+                width={200}
+                height={56}
+                className="h-12 w-auto md:h-14"
+              />
             </Link>
-            <p className="mt-6 font-sans text-sm text-cacao-light leading-relaxed font-light">
-              Elegancia y sofisticación en cada detalle. Cuidadosamente seleccionados para resaltar tu esencia única.
+            <p className="mt-5 font-sans text-sm text-on-dark/65 leading-relaxed font-light">
+              Perfumería original y alternativas 1.1 de alta fidelidad. Calidad de
+              autor a un precio que sí tiene sentido.
             </p>
           </div>
 
           <div>
-            <h3 className="font-sans text-[10px] tracking-[0.25em] text-gold uppercase mb-6 font-medium">
+            <h3 className="font-sans text-[10px] tracking-[0.25em] text-gold uppercase mb-5 font-medium">
+              Tienda
+            </h3>
+            <ul className="space-y-3">
+              {[
+                { name: "Inicio", path: "/" },
+                { name: "Catálogo", path: "/catalogo" },
+                { name: "Ofertas", path: "/ofertas" },
+                { name: "Contacto", path: "/contacto" },
+              ].map((item) => (
+                <li key={item.name}>
+                  <Link
+                    href={item.path}
+                    className="font-sans text-sm text-on-dark/65 hover:text-gold transition-colors font-light relative inline-block group"
+                  >
+                    {item.name}
+                    <span className="absolute -bottom-1 left-0 w-0 h-[1px] bg-gold transition-all duration-300 group-hover:w-full"></span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div>
+            <h3 className="font-sans text-[10px] tracking-[0.25em] text-gold uppercase mb-5 font-medium">
               Legal
             </h3>
             <ul className="space-y-4">
@@ -34,7 +62,7 @@ export default function Footer() {
                 <li key={item.name}>
                   <Link
                     href={item.path}
-                    className="font-sans text-sm text-cacao-light hover:text-gold transition-colors font-light relative inline-block group"
+                    className="font-sans text-sm text-on-dark/65 hover:text-gold transition-colors font-light relative inline-block group"
                   >
                     {item.name}
                     <span className="absolute -bottom-1 left-0 w-0 h-[1px] bg-gold transition-all duration-300 group-hover:w-full"></span>
@@ -45,38 +73,32 @@ export default function Footer() {
           </div>
 
           <div>
-            <h3 className="font-sans text-[10px] tracking-[0.25em] text-gold uppercase mb-6 font-medium">
+            <h3 className="font-sans text-[10px] tracking-[0.25em] text-gold uppercase mb-5 font-medium">
               Contacto
             </h3>
-            <ul className="space-y-4 font-light">
+            <ul className="space-y-3 font-light">
               <li>
                 <a
                   href="https://wa.me/+573170302862"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="font-sans text-sm text-cacao-light hover:text-gold transition-colors"
+                  className="font-sans text-sm text-on-dark/65 hover:text-gold transition-colors"
                 >
                   WhatsApp: +57 317 030 2862
                 </a>
               </li>
               <li>
-                <span className="font-sans text-sm text-cacao-light">
+                <span className="font-sans text-sm text-on-dark/65">
                   Email: admin_store@emanellastore.com
                 </span>
               </li>
             </ul>
-          </div>
-
-          <div>
-            <h3 className="font-sans text-[10px] tracking-[0.25em] text-gold uppercase mb-6 font-medium">
-              Síguenos
-            </h3>
-            <div className="flex gap-4">
+            <div className="flex gap-4 mt-6">
               <a
                 href="https://www.instagram.com/emanella.store/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-10 h-10 rounded-full border border-cacao/20 flex items-center justify-center hover:border-gold hover:text-gold transition-all duration-300 hover:scale-105 hover:bg-gold/5"
+                className="w-10 h-10 rounded-full border border-on-dark/20 flex items-center justify-center hover:border-gold hover:text-gold transition-all duration-300 hover:scale-105 hover:bg-gold/5"
                 aria-label="Instagram"
               >
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
@@ -87,7 +109,7 @@ export default function Footer() {
                 href="https://www.facebook.com/profile.php?id=61588962472270"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-10 h-10 rounded-full border border-cacao/20 flex items-center justify-center hover:border-gold hover:text-gold transition-all duration-300 hover:scale-105 hover:bg-gold/5"
+                className="w-10 h-10 rounded-full border border-on-dark/20 flex items-center justify-center hover:border-gold hover:text-gold transition-all duration-300 hover:scale-105 hover:bg-gold/5"
                 aria-label="Facebook"
               >
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
@@ -98,7 +120,7 @@ export default function Footer() {
                 href="https://www.tiktok.com/@emanella.store"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-10 h-10 rounded-full border border-cacao/20 flex items-center justify-center hover:border-gold hover:text-gold transition-all duration-300 hover:scale-105 hover:bg-gold/5"
+                className="w-10 h-10 rounded-full border border-on-dark/20 flex items-center justify-center hover:border-gold hover:text-gold transition-all duration-300 hover:scale-105 hover:bg-gold/5"
                 aria-label="TikTok"
               >
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
@@ -109,14 +131,13 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="border-t border-cacao/10 mt-16 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="font-sans text-[10px] uppercase text-cacao-light tracking-widest">
+        <div className="border-t border-on-dark/15 mt-10 pt-6 flex flex-col md:flex-row justify-between items-center gap-3">
+          <p className="font-sans text-[10px] uppercase text-on-dark/65 tracking-widest">
             © {new Date().getFullYear()} Emanella Store. Todos los derechos reservados.
           </p>
-          <div className="flex items-center gap-4 text-cacao-light text-[10px] uppercase tracking-widest">
-            <span>Secure Checkout</span>
-            <span>Worldwide Shipping</span>
-          </div>
+          <p className="font-sans text-[10px] uppercase text-on-dark/65 tracking-widest text-center">
+            Envíos a toda Colombia con guía de rastreo
+          </p>
         </div>
       </div>
     </footer>

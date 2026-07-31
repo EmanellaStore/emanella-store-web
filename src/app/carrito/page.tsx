@@ -68,7 +68,7 @@ export default function CartPage() {
                     </p>
                     <Link
                         href="/catalogo"
-                        className="inline-block bg-gold text-cream px-10 py-4 text-xs uppercase tracking-[0.3em] hover:bg-gold-dark transition-colors"
+                        className="inline-block bg-warm-black text-on-dark px-10 py-4 text-xs uppercase tracking-[0.3em] hover:bg-gold-dark transition-colors"
                     >
                         Ver catálogo
                     </Link>
@@ -242,7 +242,7 @@ export default function CartPage() {
 
                             <Link
                                 href="/checkout"
-                                className="block w-full bg-gold text-cream text-center py-4 font-sans text-xs uppercase tracking-[0.3em] hover:bg-gold-dark transition-colors mt-2"
+                                className="block w-full bg-warm-black text-on-dark text-center py-4 font-sans text-xs uppercase tracking-[0.3em] hover:bg-gold-dark transition-colors mt-2"
                             >
                                 Finalizar pedido
                             </Link>

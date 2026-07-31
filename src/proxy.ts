@@ -21,15 +21,36 @@ export async function proxy(request: NextRequest) {
     }
   }
 
+  // Cartera (fiados): abierta a ADMIN y al usuario compartido con rol CARTERA
+  if (pathname.startsWith("/cartera") || pathname.startsWith("/api/cartera")) {
+    const allowed = session && (session.role === "ADMIN" || session.role === "CARTERA");
+    if (!allowed) {
+      if (pathname.startsWith("/api/")) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+      return NextResponse.redirect(new URL("/login?destino=cartera", request.url));
+    }
+  }
+
   if (pathname === "/login" && session) {
-    return NextResponse.redirect(
-      new URL(session.role === "ADMIN" ? "/admin/orders" : "/catalogo", request.url)
-    );
+    const destino =
+      session.role === "ADMIN"
+        ? "/admin"
+        : session.role === "CARTERA"
+          ? "/cartera"
+          : "/catalogo";
+    return NextResponse.redirect(new URL(destino, request.url));
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/api/admin/:path*", "/login"],
+  matcher: [
+    "/admin/:path*",
+    "/api/admin/:path*",
+    "/cartera/:path*",
+    "/api/cartera/:path*",
+    "/login",
+  ],
 };

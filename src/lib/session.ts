@@ -9,7 +9,7 @@ const MAX_AGE = 60 * 60 * 24 * 7; // 7 días
 export interface SessionPayload {
   userId: string;
   email: string;
-  role: "ADMIN" | "CLIENT";
+  role: "ADMIN" | "CLIENT" | "CARTERA";
   name: string;
 }
 

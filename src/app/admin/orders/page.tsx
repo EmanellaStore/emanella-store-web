@@ -134,7 +134,7 @@ export default function AdminOrdersPage() {
         <p className="text-red-500 font-sans text-sm">{error}</p>
         <button
           onClick={loadOrders}
-          className="mt-4 px-4 py-2 bg-gold text-cream text-xs uppercase tracking-widest"
+          className="mt-4 px-4 py-2 bg-warm-black text-on-dark text-xs uppercase tracking-widest"
         >
           Reintentar
         </button>
@@ -325,7 +325,7 @@ export default function AdminOrdersPage() {
               <button
                 onClick={confirmShipping}
                 disabled={actionLoading === shippingOrderId}
-                className="flex-1 px-4 py-2 bg-gold text-cream hover:bg-gold-dark text-sm disabled:opacity-50"
+                className="flex-1 px-4 py-2 bg-warm-black text-on-dark hover:bg-gold-dark text-sm disabled:opacity-50"
               >
                 {actionLoading === shippingOrderId ? "Enviando..." : "Marcar como enviado"}
               </button>

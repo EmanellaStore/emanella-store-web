@@ -72,7 +72,7 @@ export default function WelcomeCaptureModal() {
           <button onClick={dismiss} className="flex-1 py-2 text-sm text-warm-gray">
             Ahora no
           </button>
-          <button onClick={submit} className="flex-1 py-2 bg-gold text-cream text-sm">
+          <button onClick={submit} className="flex-1 py-2 bg-warm-black text-on-dark text-sm">
             Obtener cupón
           </button>
         </div>

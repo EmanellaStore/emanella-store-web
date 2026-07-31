@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useCartStore, CartItem } from "@/store/useCartStore";
 import { useToastStore } from "@/store/useToastStore";
+import { useUiStore } from "@/store/useUiStore";
 import { trackViewContent, trackAddToCart } from "@/lib/analytics";
 
 interface Variant {
@@ -76,8 +77,11 @@ export default function AddToCartSection({ product, variants }: AddToCartSection
             imageUrl: product.imageUrl || undefined,
         });
 
-        // Feedback visual rápido
-        setTimeout(() => setIsAdding(false), 800);
+        // Feedback visual rápido y abrir el drawer del carrito
+        setTimeout(() => {
+            setIsAdding(false);
+            useUiStore.getState().openCartDrawer();
+        }, 450);
     };
 
 
@@ -111,10 +115,10 @@ export default function AddToCartSection({ product, variants }: AddToCartSection
                     disabled={isAdding}
                     className={`w-full py-5 font-sans text-xs tracking-[0.3em] uppercase transition-all duration-500 shadow-lg ${isAdding
                         ? "bg-warm-gray text-cream cursor-default"
-                        : "bg-gold text-cream hover:bg-gold-dark shadow-gold/10"
+                        : "bg-warm-black text-on-dark hover:bg-gold-dark shadow-gold/10"
                         }`}
                 >
-                    {isAdding ? "¡Añadido!" : "Añadir a la bolsa"}
+                    {isAdding ? "Agregado ✓" : "Agregar al carrito"}
                 </button>
             </div>
         </div>

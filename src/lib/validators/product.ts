@@ -28,6 +28,18 @@ export const ProductSchema = z.object({
   isActive: z.boolean().default(true),
   variants: z.array(ProductVariantSchema).min(1, "Al menos 1 variante requerida"),
   images: z.array(ProductImageSchema).max(MAX_IMAGES).optional(),
+  // Perfil olfativo (opcional; solo aplica a perfumes)
+  notasSalida: z.string().max(300).nullable().optional(),
+  notasCorazon: z.string().max(300).nullable().optional(),
+  notasFondo: z.string().max(300).nullable().optional(),
+  concentracion: z.string().max(100).nullable().optional(),
+  familia: z.string().max(100).nullable().optional(),
+  duracion: z.string().max(100).nullable().optional(),
+  inspiradoEn: z.string().max(150).nullable().optional(),
+  genero: z
+    .union([z.enum(["hombre", "dama", "unisex"]), z.literal("")])
+    .nullable()
+    .optional(),
 });
 
 export type ProductFormData = z.infer<typeof ProductSchema>;

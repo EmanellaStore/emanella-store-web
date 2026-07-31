@@ -3,11 +3,25 @@
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { Package, ShoppingCart, LogOut, Home } from "lucide-react";
+import Image from "next/image";
+import {
+  Package,
+  ShoppingCart,
+  LogOut,
+  Home,
+  LayoutDashboard,
+  Boxes,
+  Users,
+  TicketPercent,
+} from "lucide-react";
 
 const navItems = [
+  { href: "/admin", label: "Inicio", icon: LayoutDashboard, exact: true },
   { href: "/admin/orders", label: "Pedidos", icon: ShoppingCart },
   { href: "/admin/products", label: "Productos", icon: Package },
+  { href: "/admin/inventory", label: "Inventario", icon: Boxes },
+  { href: "/admin/customers", label: "Clientes", icon: Users },
+  { href: "/admin/coupons", label: "Cupones", icon: TicketPercent },
 ];
 
 export default function AdminSidebar() {
@@ -22,13 +36,16 @@ export default function AdminSidebar() {
   };
 
   return (
-    <aside className="w-64 bg-warm-black text-cacao flex flex-col shrink-0">
-      <div className="h-16 flex items-center px-6 border-b border-white/10">
-        <Link href="/admin" className="font-serif text-xl tracking-widest text-cacao flex flex-col">
-          Emanella <span className="text-gold">Store</span>
-          <span className="block font-sans text-[10px] tracking-widest text-cacao-light uppercase mt-1">
-            Panel de Control
-          </span>
+    <aside className="w-64 bg-warm-black text-on-dark flex flex-col shrink-0">
+      <div className="h-16 flex items-center px-6 border-b border-on-dark/10">
+        <Link href="/admin" className="flex flex-col gap-1">
+          <Image
+            src="/logo-emanella-white.png"
+            alt="Emanella Perfumería"
+            width={140}
+            height={40}
+            className="h-9 w-auto"
+          />
         </Link>
       </div>
 
@@ -36,15 +53,17 @@ export default function AdminSidebar() {
         <ul className="space-y-1">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+            const isActive = item.exact
+              ? pathname === item.href
+              : pathname === item.href || pathname.startsWith(`${item.href}/`);
             return (
               <li key={item.href}>
                 <Link
                   href={item.href}
                   className={`flex items-center gap-3 px-6 py-3 font-sans text-sm tracking-wider transition-colors relative ${
                     isActive
-                      ? "text-gold bg-white/5"
-                      : "text-cacao-light hover:bg-white/5 hover:text-cacao"
+                      ? "text-gold bg-on-dark/5"
+                      : "text-on-dark/60 hover:bg-on-dark/5 hover:text-on-dark"
                   }`}
                 >
                   {isActive && (
@@ -59,10 +78,10 @@ export default function AdminSidebar() {
         </ul>
       </nav>
 
-      <div className="p-4 border-t border-white/10 space-y-2">
+      <div className="p-4 border-t border-on-dark/10 space-y-2">
         <Link
           href="/"
-          className="flex items-center gap-3 px-4 py-3 text-sm text-cacao-light hover:text-cacao transition-colors"
+          className="flex items-center gap-3 px-4 py-3 text-sm text-on-dark/60 hover:text-on-dark transition-colors"
         >
           <Home size={18} strokeWidth={1.5} />
           <span className="font-sans tracking-widest uppercase text-[10px]">

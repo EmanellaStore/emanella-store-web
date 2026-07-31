@@ -1,0 +1,32 @@
+{
+  "name": "Cartera Emanella",
+  "short_name": "Cartera",
+  "description": "Fiados y abonos de Emanella",
+  "start_url": "/cartera",
+  "scope": "/cartera",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ECE6F0",
+  "theme_color": "#2A2330",
+  "lang": "es-CO",
+  "icons": [
+    {
+      "src": "/cartera-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/cartera-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/cartera-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

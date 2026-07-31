@@ -14,7 +14,18 @@ interface Variant {
   stock: number;
 }
 
-interface ProductFormData {
+interface PerfumeProfile {
+  notasSalida: string;
+  notasCorazon: string;
+  notasFondo: string;
+  concentracion: string;
+  familia: string;
+  duracion: string;
+  inspiradoEn: string;
+  genero: string;
+}
+
+interface ProductFormData extends PerfumeProfile {
   name: string;
   slug: string;
   category: string;
@@ -33,6 +44,14 @@ interface ProductFormProps {
     isActive?: boolean;
     variants?: { sku: string; attributeName: string; attributeValue: string; price: number | string; originalPrice?: number | string | null; stock: number }[];
     images?: { imageUrl: string; position: number }[];
+    notasSalida?: string | null;
+    notasCorazon?: string | null;
+    notasFondo?: string | null;
+    concentracion?: string | null;
+    familia?: string | null;
+    duracion?: string | null;
+    inspiradoEn?: string | null;
+    genero?: string | null;
   };
   onSubmit: (data: ProductFormData) => Promise<void>;
   onCancel: () => void;
@@ -53,6 +72,14 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
         : null,
     })),
     images: product?.images || [],
+    notasSalida: product?.notasSalida || "",
+    notasCorazon: product?.notasCorazon || "",
+    notasFondo: product?.notasFondo || "",
+    concentracion: product?.concentracion || "",
+    familia: product?.familia || "",
+    duracion: product?.duracion || "",
+    inspiradoEn: product?.inspiradoEn || "",
+    genero: product?.genero || "",
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -184,6 +211,14 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
           stock: v.stock,
         })),
         images: formData.images,
+        notasSalida: formData.notasSalida.trim(),
+        notasCorazon: formData.notasCorazon.trim(),
+        notasFondo: formData.notasFondo.trim(),
+        concentracion: formData.concentracion.trim(),
+        familia: formData.familia.trim(),
+        duracion: formData.duracion.trim(),
+        inspiradoEn: formData.inspiradoEn.trim(),
+        genero: formData.genero.trim(),
       };
       await onSubmit(submitData);
     } finally {
@@ -270,6 +305,73 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
         />
         {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
       </div>
+
+      {/* ===== Perfil olfativo (solo aplica a perfumes; todos opcionales) ===== */}
+      <fieldset className="border border-blush/50 p-4 space-y-4">
+        <legend className="px-2 text-xs uppercase tracking-widest text-gold-dark">
+          Perfil olfativo (opcional)
+        </legend>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {(
+            [
+              { key: "notasSalida", label: "Notas de salida", ph: "Ej: bergamota, pimienta rosa" },
+              { key: "notasCorazon", label: "Notas de corazón", ph: "Ej: jazmín, lavanda" },
+              { key: "notasFondo", label: "Notas de fondo", ph: "Ej: ámbar, vainilla, almizcle" },
+            ] as const
+          ).map(({ key, label, ph }) => (
+            <div key={key}>
+              <label className="block text-xs uppercase tracking-widest text-warm-gray mb-2">
+                {label}
+              </label>
+              <input
+                type="text"
+                value={formData[key]}
+                onChange={(e) => setFormData((prev) => ({ ...prev, [key]: e.target.value }))}
+                className="w-full border p-3 outline-none focus:border-gold border-blush/50 bg-white/50"
+                placeholder={ph}
+              />
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {(
+            [
+              { key: "concentracion", label: "Concentración", ph: "Ej: Eau de Parfum" },
+              { key: "familia", label: "Familia olfativa", ph: "Ej: Ámbar especiado" },
+              { key: "duracion", label: "Duración", ph: "Ej: 8–10 horas" },
+              { key: "inspiradoEn", label: "Inspirado en (solo 1.1)", ph: "Ej: Sauvage de Dior" },
+            ] as const
+          ).map(({ key, label, ph }) => (
+            <div key={key}>
+              <label className="block text-xs uppercase tracking-widest text-warm-gray mb-2">
+                {label}
+              </label>
+              <input
+                type="text"
+                value={formData[key]}
+                onChange={(e) => setFormData((prev) => ({ ...prev, [key]: e.target.value }))}
+                className="w-full border p-3 outline-none focus:border-gold border-blush/50 bg-white/50"
+                placeholder={ph}
+              />
+            </div>
+          ))}
+        </div>
+        <div className="max-w-xs">
+          <label className="block text-xs uppercase tracking-widest text-warm-gray mb-2">
+            Género
+          </label>
+          <select
+            value={formData.genero}
+            onChange={(e) => setFormData((prev) => ({ ...prev, genero: e.target.value }))}
+            className="w-full border p-3 outline-none focus:border-gold border-blush/50 bg-white/50"
+          >
+            <option value="">Sin definir</option>
+            <option value="hombre">Hombre</option>
+            <option value="dama">Dama</option>
+            <option value="unisex">Unisex</option>
+          </select>
+        </div>
+      </fieldset>
 
       <div>
         <div className="flex items-center justify-between mb-4">
@@ -472,7 +574,7 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
         <button
           type="submit"
           disabled={submitting}
-          className="px-6 py-3 bg-gold text-cream text-xs uppercase tracking-widest hover:bg-gold-dark transition-colors disabled:bg-warm-gray flex items-center gap-2"
+          className="px-6 py-3 bg-warm-black text-on-dark text-xs uppercase tracking-widest hover:bg-gold-dark transition-colors disabled:bg-warm-gray flex items-center gap-2"
         >
           {submitting ? (
             <>

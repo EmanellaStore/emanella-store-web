@@ -22,6 +22,15 @@ export interface ProductInput {
   isActive: boolean;
   variants: ProductVariantInput[];
   images?: ProductImageInput[];
+  // Perfil olfativo (opcional; solo aplica a perfumes)
+  notasSalida?: string | null;
+  notasCorazon?: string | null;
+  notasFondo?: string | null;
+  concentracion?: string | null;
+  familia?: string | null;
+  duracion?: string | null;
+  inspiradoEn?: string | null;
+  genero?: string | null;
 }
 
 export interface ProductOutput {
@@ -53,10 +62,13 @@ export interface ProductImageOutput {
 
 export type Category = "perfumes" | "bolsos" | "accesorios" | "zapatos" | "combos";
 
+// Por ahora la tienda es solo perfumería; las demás categorías se reactivarán
+// más adelante (decisión de Steven 2026-07-09). El validador sigue aceptando
+// los valores viejos para no romper productos existentes.
 export const CATEGORIES: { value: Category; label: string }[] = [
   { value: "perfumes", label: "Perfumes" },
-  { value: "bolsos", label: "Bolsos" },
-  { value: "accesorios", label: "Accesorios" },
-  { value: "zapatos", label: "Zapatos" },
+  // { value: "bolsos", label: "Bolsos" },
+  // { value: "accesorios", label: "Accesorios" },
+  // { value: "zapatos", label: "Zapatos" },
   { value: "combos", label: "Combos Especiales" },
 ];

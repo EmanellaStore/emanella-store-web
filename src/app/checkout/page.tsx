@@ -195,6 +195,24 @@ function CheckoutContent() {
       if (result.success) {
         setSubmitted(true);
         clearCart();
+        if (data.paymentMethod === "wompi") {
+          // Pedimos la URL firmada de Wompi y redirigimos al Web Checkout.
+          // Si algo falla, la orden ya existe (PENDIENTE) → seguimos a /gracias.
+          try {
+            const payRes = await fetch("/api/payments/wompi", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ orderId: result.orderId }),
+            });
+            const pay = await payRes.json();
+            if (pay.url) {
+              window.location.href = pay.url;
+              return;
+            }
+          } catch (e) {
+            console.error("Error generando pago Wompi:", e);
+          }
+        }
         router.replace(`/gracias?orderId=${result.orderId}`);
       } else {
         alert("Hubo un error: " + result.error);
@@ -291,8 +309,22 @@ function CheckoutContent() {
                 <input
                   type="radio"
                   name="paymentMethod"
-                  value="contraentrega"
+                  value="wompi"
                   defaultChecked
+                  className="accent-gold"
+                />
+                <span className="font-sans text-sm text-cacao">
+                  Paga en línea con Wompi
+                  <span className="block text-xs text-warm-gray font-light">
+                    Tarjeta, PSE, Nequi o Bancolombia — pago seguro
+                  </span>
+                </span>
+              </label>
+              <label className="flex items-center gap-3 p-4 border border-blush/50 bg-beige cursor-pointer hover:border-gold transition-colors">
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  value="contraentrega"
                   className="accent-gold"
                 />
                 <span className="font-sans text-sm text-cacao">
@@ -355,13 +387,16 @@ function CheckoutContent() {
               )}
             </div>
 
-            {/* ===== RESUMEN ===== */}
-            <div className="bg-beige border border-blush/30 p-6 text-cacao space-y-3">
-              <div className="flex justify-between font-sans text-xs tracking-widest uppercase opacity-80">
+            {/* ===== RESUMEN — panel grafito (paridad branding checkout Shopify) ===== */}
+            <div className="bg-warm-black p-6 text-on-dark space-y-3">
+              <p className="font-serif text-lg font-medium text-on-dark mb-1">
+                Resumen del pedido
+              </p>
+              <div className="flex justify-between font-sans text-xs tracking-widest uppercase text-on-dark/70">
                 <span>Subtotal</span>
                 <span>${subtotal.toLocaleString("es-CO")}</span>
               </div>
-              <div className="flex justify-between font-sans text-xs tracking-widest uppercase opacity-80">
+              <div className="flex justify-between font-sans text-xs tracking-widest uppercase text-on-dark/70">
                 <span>Envío</span>
                 <span>
                   {shipping === 0
@@ -370,23 +405,23 @@ function CheckoutContent() {
                 </span>
               </div>
               {discount > 0 && (
-                <div className="flex justify-between font-sans text-xs tracking-widest uppercase text-green-300">
+                <div className="flex justify-between font-sans text-xs tracking-widest uppercase text-gold">
                   <span>Descuento</span>
                   <span>-${discount.toLocaleString("es-CO")}</span>
                 </div>
               )}
-              <div className="border-t border-blush/20 pt-3 flex justify-between font-sans text-sm tracking-widest uppercase">
+              <div className="border-t border-on-dark/20 pt-3 flex justify-between items-baseline font-sans text-sm tracking-widest uppercase">
                 <span>Total</span>
-                <span className="text-gold font-bold">
+                <span className="font-serif text-xl font-semibold text-gold normal-case tracking-normal">
                   ${total.toLocaleString("es-CO")}
                 </span>
               </div>
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-gold py-4 text-xs uppercase tracking-[0.3em] hover:bg-gold-dark transition-colors disabled:bg-warm-gray mt-4"
+                className="w-full bg-gold text-warm-black font-medium py-4 text-xs uppercase tracking-[0.3em] hover:bg-gold-dark hover:text-on-dark transition-colors disabled:bg-warm-gray disabled:text-on-dark mt-4"
               >
-                {loading ? "Procesando..." : "Confirmar Pedido"}
+                {loading ? "Procesando..." : "Confirmar pedido"}
               </button>
             </div>
           </div>

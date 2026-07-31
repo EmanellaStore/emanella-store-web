@@ -171,7 +171,7 @@ export default function AdminProductsPage() {
             </Link>
             <button
               onClick={handleCreate}
-              className="px-4 py-2 bg-gold text-cream text-xs uppercase tracking-widest hover:bg-gold-dark transition-colors flex items-center gap-2"
+              className="px-4 py-2 bg-warm-black text-on-dark text-xs uppercase tracking-widest hover:bg-gold-dark transition-colors flex items-center gap-2"
             >
               <Plus size={16} />
               Nuevo Producto

@@ -65,7 +65,7 @@ export default async function SuccessPage({ searchParams, }: {
       
             <Link  
               href="/catalogo"  
-              className="inline-block bg-gold text-cream px-10 py-4 text-xs uppercase tracking-[0.3em] hover:bg-gold-dark transition-colors"  
+              className="inline-block bg-warm-black text-on-dark px-10 py-4 text-xs uppercase tracking-[0.3em] hover:bg-gold-dark transition-colors"  
             >  
               Volver a la tienda  
             </Link>  

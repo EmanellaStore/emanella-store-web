@@ -7,15 +7,29 @@ type CatalogPageProps = {
     searchParams?: Promise<{
         categoria?: string;
         q?: string;
+        genero?: string;
+        orden?: string;
     }>;
 };
 
-const validCategories = ["perfumes", "bolsos", "accesorios", "zapatos"];
+// Por ahora la tienda es solo perfumería; bolsos/accesorios/zapatos se
+// reactivarán más adelante (decisión de Steven 2026-07-09).
+const validCategories = [
+    "perfumes",
+    // "bolsos",
+    // "accesorios",
+    // "zapatos",
+];
+const validGeneros = ["hombre", "dama", "unisex"];
 
 export default async function CatalogPage({ searchParams }: CatalogPageProps) {
     const params = await searchParams;
     const categoria = typeof params?.categoria === "string" ? params.categoria.toLowerCase() : "";
     const q = typeof params?.q === "string" ? params.q.trim() : "";
+    const genero = validGeneros.includes(params?.genero?.toLowerCase() ?? "")
+        ? params!.genero!.toLowerCase()
+        : "";
+    const orden = params?.orden === "recientes" ? "recientes" : "";
 
     const categoryFilter = validCategories.includes(categoria)
         ? { category: categoria }
@@ -64,12 +78,26 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
         },
     });
 
-    // Mezclar los productos aleatoriamente (Fisher-Yates shuffle)
-    const shuffledProducts = [...products];
-    for (let i = shuffledProducts.length - 1; i > 0; i--) {
-        // eslint-disable-next-line react-hooks/purity
-        const j = Math.floor(Math.random() * (i + 1));
-        [shuffledProducts[i], shuffledProducts[j]] = [shuffledProducts[j], shuffledProducts[i]];
+    // Filtro por género (campo nuevo del perfil olfativo). Se aplica en memoria
+    // para tolerar el cliente Prisma previo a la migración: si ningún producto
+    // tiene género aún, el filtro no se aplica (no vaciamos el catálogo).
+    type WithGenero = { genero?: string | null };
+    const hasGeneroData = products.some((p) => (p as WithGenero).genero);
+    const generoProducts =
+        genero && hasGeneroData
+            ? products.filter(
+                  (p) => ((p as WithGenero).genero ?? "").toLowerCase() === genero
+              )
+            : products;
+
+    // "Lo nuevo" mantiene el orden por fecha; el resto se mezcla (Fisher-Yates)
+    const shuffledProducts = [...generoProducts];
+    if (orden !== "recientes") {
+        for (let i = shuffledProducts.length - 1; i > 0; i--) {
+            // eslint-disable-next-line react-hooks/purity
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffledProducts[i], shuffledProducts[j]] = [shuffledProducts[j], shuffledProducts[i]];
+        }
     }
 
     const normalizedProducts = shuffledProducts.map((product) => ({
@@ -80,8 +108,15 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
         hoverImageUrl: product.images[1]?.imageUrl || null,
         category: product.category,
         minPrice: product.variants.length > 0 ? Number(product.variants[0].price) : 0,
-        originalPrice: product.variants.length > 0 && product.variants[0].originalPrice 
-            ? Number(product.variants[0].originalPrice) 
+        originalPrice: product.variants.length > 0 && product.variants[0].originalPrice
+            ? Number(product.variants[0].originalPrice)
+            : null,
+        variant: product.variants[0]
+            ? {
+                id: product.variants[0].id,
+                attributeName: product.variants[0].attributeName,
+                attributeValue: product.variants[0].attributeValue,
+            }
             : null,
     }));
 
@@ -90,16 +125,16 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
             <Navbar />
             <CatalogSearchTracker query={q} />
 
-            <section className="pt-28 pb-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-                <div className="text-center mb-10">
-                    <p className="font-sans text-[10px] tracking-[0.4em] text-gold uppercase mb-4">
-                        Catálogo
-                    </p>
-                    <h1 className="font-serif text-5xl md:text-6xl text-cacao font-light">
+            <section className="pt-28 pb-10 px-4 sm:px-6 lg:px-8 max-w-[1560px] mx-auto">
+                {/* Header editorial: eyebrow con guiones + Fraunces + hairline champán */}
+                <div className="text-center mb-10 flex flex-col items-center">
+                    <p className="eyebrow mb-4">Colección</p>
+                    <h1 className="font-serif text-5xl md:text-6xl text-cacao font-medium">
                         Nuestra colección
                     </h1>
-                    <p className="font-sans text-warm-gray mt-4 max-w-2xl mx-auto">
-                        Perfumes, bolsos y accesorios seleccionados para resaltar elegancia y estilo.
+                    <span className="hairline-v h-10 mt-5 mb-4" aria-hidden="true" />
+                    <p className="font-sans text-warm-gray max-w-2xl mx-auto font-light">
+                        Perfumería original y alternativas 1.1 de alta fidelidad, elegidas una a una.
                     </p>
                 </div>
 
@@ -115,7 +150,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                         {categoria ? <input type="hidden" name="categoria" value={categoria} /> : null}
                         <button
                             type="submit"
-                            className="bg-gold text-cream px-6 py-3 text-xs uppercase tracking-[0.2em] hover:bg-gold-dark transition-colors"
+                            className="bg-warm-black text-on-dark px-6 py-3 text-xs uppercase tracking-[0.2em] hover:bg-gold-dark transition-colors"
                         >
                             Buscar
                         </button>
@@ -144,6 +179,19 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                                 {item}
                             </Link>
                         ))}
+                        <span className="hidden lg:block w-px self-stretch bg-blush" aria-hidden="true" />
+                        {validGeneros.map((item) => (
+                            <Link
+                                key={item}
+                                href={`/catalogo?genero=${item}${categoria ? `&categoria=${categoria}` : ""}`}
+                                className={`px-4 py-2 border text-xs uppercase tracking-[0.2em] transition-colors ${genero === item
+                                        ? "bg-cacao text-cream border-cacao"
+                                        : "border-blush text-cacao hover:border-gold hover:text-gold"
+                                    }`}
+                            >
+                                {item}
+                            </Link>
+                        ))}
                     </div>
                 </div>
 
@@ -157,13 +205,13 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                         </p>
                         <Link
                             href="/catalogo"
-                            className="inline-block bg-gold text-cream px-6 py-3 text-xs uppercase tracking-[0.2em] hover:bg-gold-dark transition-colors"
+                            className="inline-block bg-warm-black text-on-dark px-6 py-3 text-xs uppercase tracking-[0.2em] hover:bg-gold-dark transition-colors"
                         >
                             Ver todo
                         </Link>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-6 gap-y-12">
+                    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-x-5 gap-y-10">
                         {normalizedProducts.map((product) => (
                             <ProductCard
                                 key={product.id}
@@ -174,6 +222,8 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                                 category={product.category}
                                 price={product.minPrice}
                                 originalPrice={product.originalPrice}
+                                productId={product.id}
+                                variant={product.variant}
                             />
                         ))}
                     </div>

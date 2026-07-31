@@ -33,6 +33,14 @@ export async function createProduct(data: ProductInput) {
         category: data.category,
         description: data.description,
         isActive: data.isActive,
+        notasSalida: data.notasSalida?.trim() || null,
+        notasCorazon: data.notasCorazon?.trim() || null,
+        notasFondo: data.notasFondo?.trim() || null,
+        concentracion: data.concentracion?.trim() || null,
+        familia: data.familia?.trim() || null,
+        duracion: data.duracion?.trim() || null,
+        inspiradoEn: data.inspiradoEn?.trim() || null,
+        genero: data.genero?.trim().toLowerCase() || null,
         variants: {
           create: data.variants.map((v) => ({
             sku: v.sku,
@@ -77,6 +85,14 @@ export async function updateProduct(productId: string, data: ProductInput) {
         category: data.category,
         description: data.description,
         isActive: data.isActive,
+        notasSalida: data.notasSalida?.trim() || null,
+        notasCorazon: data.notasCorazon?.trim() || null,
+        notasFondo: data.notasFondo?.trim() || null,
+        concentracion: data.concentracion?.trim() || null,
+        familia: data.familia?.trim() || null,
+        duracion: data.duracion?.trim() || null,
+        inspiradoEn: data.inspiradoEn?.trim() || null,
+        genero: data.genero?.trim().toLowerCase() || null,
       },
     });
 
@@ -305,6 +321,64 @@ export async function getFeaturedProducts(limit = 4) {
   }
 
   return shuffled.slice(0, limit);
+}
+
+// "Los más deseados": ranking real por unidades vendidas; completa con
+// productos recientes si aún no hay historial de ventas suficiente.
+export async function getBestSellers(limit = 4) {
+  const grouped = await db.orderItem.groupBy({
+    by: ["variantId"],
+    _sum: { quantity: true },
+    orderBy: { _sum: { quantity: "desc" } },
+    take: limit * 4,
+  });
+  const variantIds = grouped.map((g) => g.variantId);
+  const variants = variantIds.length
+    ? await db.productVariant.findMany({
+        where: { id: { in: variantIds } },
+        select: { id: true, productId: true },
+      })
+    : [];
+  const productIdByVariant = new Map(variants.map((v) => [v.id, v.productId]));
+  const rankedProductIds: string[] = [];
+  for (const g of grouped) {
+    const pid = productIdByVariant.get(g.variantId);
+    if (pid && !rankedProductIds.includes(pid)) rankedProductIds.push(pid);
+  }
+  const products = rankedProductIds.length
+    ? await db.product.findMany({
+        where: { id: { in: rankedProductIds }, isActive: true },
+        include: {
+          variants: { orderBy: { price: "asc" }, take: 1 },
+          images: { orderBy: { position: "asc" }, take: 2 },
+        },
+      })
+    : [];
+  const byId = new Map(products.map((p) => [p.id, p]));
+  const ranked = rankedProductIds
+    .map((id) => byId.get(id))
+    .filter((p): p is NonNullable<ReturnType<typeof byId.get>> => Boolean(p))
+    .slice(0, limit);
+  if (ranked.length < limit) {
+    const fill = await getFeaturedProducts(limit * 2);
+    for (const p of fill) {
+      if (ranked.length >= limit) break;
+      if (!ranked.some((r) => r.id === p.id)) ranked.push(p);
+    }
+  }
+  return ranked;
+}
+
+export async function getNewestProducts(limit = 4) {
+  return db.product.findMany({
+    where: { isActive: true },
+    include: {
+      variants: { orderBy: { price: "asc" }, take: 1 },
+      images: { orderBy: { position: "asc" }, take: 2 },
+    },
+    orderBy: { createdAt: "desc" },
+    take: limit,
+  });
 }
 
 export async function getAllCategories() {

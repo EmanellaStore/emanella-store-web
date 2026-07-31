@@ -57,7 +57,7 @@ export default async function TrackPage({ params }: { params: Promise<{ orderId:
               <div key={step.key} className="flex flex-col items-center relative z-10 w-1/4">
                 <div
                   className={`w-12 h-12 rounded-full flex items-center justify-center text-xl ${
-                    i <= currentIdx ? 'bg-gold text-cream' : 'bg-blush/30 text-warm-gray'
+                    i <= currentIdx ? 'bg-warm-black text-on-dark' : 'bg-blush/30 text-warm-gray'
                   }`}
                 >
                   {step.icon}

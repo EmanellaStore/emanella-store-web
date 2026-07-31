@@ -32,8 +32,8 @@ export default function ToastContainer() {
 
           {/* Ícono check (solo si NO hay imagen) */}
           {!toast.imageUrl && (
-            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gold flex items-center justify-center">
-              <Check size={20} className="text-cream" strokeWidth={2.5} />
+            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-warm-black flex items-center justify-center">
+              <Check size={20} className="text-on-dark" strokeWidth={2.5} />
             </div>
           )}
 

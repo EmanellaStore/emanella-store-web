@@ -3,6 +3,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 
 type AuthMode = "login" | "register";
 
@@ -35,7 +36,9 @@ export default function AuthPage() {
   
       // Redirect según rol (viene del backend)
       if (data.user.role === "ADMIN") {
-        window.location.href = "/admin/orders";
+        window.location.href = "/admin";
+      } else if (data.user.role === "CARTERA") {
+        window.location.href = "/cartera";
       } else {
         window.location.href = "/catalogo";
       }
@@ -94,18 +97,23 @@ export default function AuthPage() {
   return (
     <main className="min-h-screen bg-cream flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <div className="text-center mb-8">
+        <div className="text-center mb-8 flex flex-col items-center">
           <Link href="/" className="inline-block">
-            <span className="font-serif text-4xl font-semibold text-cacao tracking-widest">
-              Emanella <span className="text-gold">Store</span>
-            </span>
+            <Image
+              src="/logo-emanella.png"
+              alt="Emanella Perfumería"
+              width={200}
+              height={56}
+              priority
+              className="h-12 w-auto"
+            />
           </Link>
-          <p className="font-sans text-xs text-warm-gray mt-2 tracking-widest uppercase">
-            {mode === "login" ? "Iniciar Sesión" : "Crear Cuenta"}
+          <p className="font-sans text-xs text-warm-gray mt-3 tracking-[0.2em] uppercase">
+            {mode === "login" ? "Iniciar sesión" : "Crear cuenta"}
           </p>
         </div>
 
-        <div className="bg-beige border border-blush/10 p-8 rounded-2xl shadow-lg shadow-black/20">
+        <div className="bg-bg-card border border-blush p-8">
           {mode === "login" ? (
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
@@ -141,12 +149,12 @@ export default function AuthPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-cacao text-cream py-3 text-xs uppercase tracking-[0.3em] hover:bg-gold transition-colors disabled:opacity-50"
+                className="w-full bg-cacao text-cream py-3 text-xs uppercase tracking-[0.3em] hover:bg-gold-dark transition-colors disabled:opacity-50"
               >
-                {loading ? "Verificando..." : "Iniciar Sesión"}
+                {loading ? "Verificando..." : "Iniciar sesión"}
               </button>
               <div className="text-center pt-4 space-y-2">
-                <Link href="/reset-password" className="text-xs text-gold hover:underline block">
+                <Link href="/reset-password" className="text-xs text-gold-dark hover:underline block">
                   ¿Olvidaste tu contraseña?
                 </Link>
                 <button
@@ -154,7 +162,7 @@ export default function AuthPage() {
                   onClick={() => { setMode("register"); setError(""); }}
                   className="text-xs text-warm-gray hover:text-cacao block w-full"
                 >
-                  ¿Nuevo cliente? <span className="text-gold">Regístrate</span>
+                  ¿Nuevo cliente? <span className="text-gold-dark">Regístrate</span>
                 </button>
               </div>
             </form>
@@ -230,9 +238,9 @@ export default function AuthPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-cacao text-cream py-3 text-xs uppercase tracking-[0.3em] hover:bg-gold transition-colors disabled:opacity-50"
+                className="w-full bg-cacao text-cream py-3 text-xs uppercase tracking-[0.3em] hover:bg-gold-dark transition-colors disabled:opacity-50"
               >
-                {loading ? "Creando cuenta..." : "Crear Cuenta"}
+                {loading ? "Creando cuenta..." : "Crear cuenta"}
               </button>
               <div className="text-center pt-4">
                 <button
@@ -240,7 +248,7 @@ export default function AuthPage() {
                   onClick={() => { setMode("login"); setError(""); }}
                   className="text-xs text-warm-gray hover:text-cacao"
                 >
-                  ¿Ya tienes cuenta? <span className="text-gold">Inicia sesión</span>
+                  ¿Ya tienes cuenta? <span className="text-gold-dark">Inicia sesión</span>
                 </button>
               </div>
             </form>

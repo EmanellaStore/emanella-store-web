@@ -33,7 +33,7 @@ export default function ContactoPage() {
                   href="https://wa.me/+573170302862"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full inline-block bg-gold text-cream px-4 py-3 text-xs uppercase tracking-[0.2em] hover:bg-gold-dark transition-colors"
+                  className="w-full inline-block bg-warm-black text-on-dark px-4 py-3 text-xs uppercase tracking-[0.2em] hover:bg-gold-dark transition-colors"
                 >
                   Contactar Ventas
                 </a>
@@ -56,7 +56,7 @@ export default function ContactoPage() {
                   href="https://wa.me/+573170302862"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full inline-block bg-gold text-cream px-4 py-3 text-xs uppercase tracking-[0.2em] hover:bg-gold-dark transition-colors"
+                  className="w-full inline-block bg-warm-black text-on-dark px-4 py-3 text-xs uppercase tracking-[0.2em] hover:bg-gold-dark transition-colors"
                 >
                   Contactar Soporte
                 </a>

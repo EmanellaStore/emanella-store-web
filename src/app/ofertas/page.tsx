@@ -54,6 +54,13 @@ export default async function OfertasPage() {
       originalPrice: product.variants.length > 0 && product.variants[0].originalPrice
         ? Number(product.variants[0].originalPrice)
         : null,
+      variant: product.variants[0]
+        ? {
+            id: product.variants[0].id,
+            attributeName: product.variants[0].attributeName,
+            attributeValue: product.variants[0].attributeValue,
+          }
+        : null,
     }));
 
   // Filtrar fragancias y artículos individuales en oferta
@@ -69,6 +76,13 @@ export default async function OfertasPage() {
       minPrice: product.variants.length > 0 ? Number(product.variants[0].price) : 0,
       originalPrice: product.variants.length > 0 && product.variants[0].originalPrice
         ? Number(product.variants[0].originalPrice)
+        : null,
+      variant: product.variants[0]
+        ? {
+            id: product.variants[0].id,
+            attributeName: product.variants[0].attributeName,
+            attributeValue: product.variants[0].attributeValue,
+          }
         : null,
     }))
     .filter((p) => p.originalPrice !== null && p.originalPrice > p.minPrice);
@@ -132,9 +146,11 @@ export default async function OfertasPage() {
                 slug={combo.slug}
                 imageUrl={combo.imageUrl}
                 hoverImageUrl={combo.hoverImageUrl}
-                category="Combo Especial"
+                category="Combo especial"
                 price={combo.minPrice}
                 originalPrice={combo.originalPrice}
+                productId={combo.id}
+                variant={combo.variant}
               />
             ))}
           </div>
@@ -183,6 +199,8 @@ export default async function OfertasPage() {
                 category={product.category}
                 price={product.minPrice}
                 originalPrice={product.originalPrice}
+                productId={product.id}
+                variant={product.variant}
               />
             ))}
           </div>

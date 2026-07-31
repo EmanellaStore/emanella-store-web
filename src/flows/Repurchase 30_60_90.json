@@ -111,7 +111,7 @@
           "parameters": [
             {
               "name": "x-n8n-token",
-              "value": "=25624e724c76f9e80260561e56623219b1f7285193d527a36c243d4ea4879c98"
+              "value": "=ce3c1b4a71efebe97dac15328003ed85879930942613a1acc431757e0f4da018"
             }
           ]
         },
@@ -149,7 +149,7 @@
           "parameters": [
             {
               "name": "x-n8n-token",
-              "value": "=25624e724c76f9e80260561e56623219b1f7285193d527a36c243d4ea4879c98"
+              "value": "=ce3c1b4a71efebe97dac15328003ed85879930942613a1acc431757e0f4da018"
             },
             {
               "name": "Content-Type",
@@ -230,7 +230,7 @@
           "parameters": [
             {
               "name": "x-n8n-token",
-              "value": "=25624e724c76f9e80260561e56623219b1f7285193d527a36c243d4ea4879c98"
+              "value": "=ce3c1b4a71efebe97dac15328003ed85879930942613a1acc431757e0f4da018"
             },
             {
               "name": "Content-Type",
