@@ -1,12 +1,15 @@
 "use client";
 // src/components/inventario/EditorProducto.tsx
-// Modal para editar stock, precios y estado de un producto. Guarda en el Excel.
+// Editor de un producto. El Stock Disponible es una FÓRMULA del Excel, así que
+// aquí es solo lectura (se previsualiza en vivo). Se editan las ENTRADAS:
+// Venta Detal (registrar ventas, baja el stock) y Stock Inicial (reabastecer).
 import { useState } from "react";
-import { X, Minus, Plus } from "lucide-react";
+import { X, Minus, Plus, ShoppingCart, PackagePlus } from "lucide-react";
 import {
   ESTADOS,
   formatMoney,
   parseNumero,
+  calcularStock,
   type InventarioItem,
 } from "@/lib/inventario";
 
@@ -17,7 +20,8 @@ interface Props {
 }
 
 export default function EditorProducto({ item, onCerrar, onGuardado }: Props) {
-  const [stock, setStock] = useState<number>(Math.max(0, item.stock));
+  const [ventaDetal, setVentaDetal] = useState<number>(Math.max(0, item.ventaDetal));
+  const [stockInicial, setStockInicial] = useState<number>(Math.max(0, item.stockInicial));
   const [precioCompra, setPrecioCompra] = useState(
     item.precioCompra ? String(item.precioCompra) : ""
   );
@@ -35,22 +39,30 @@ export default function EditorProducto({ item, onCerrar, onGuardado }: Props) {
   const nDetal = parseNumero(precioDetal);
   const margen = nDetal > 0 && nCompra > 0 ? nDetal - nCompra : null;
 
+  // Stock disponible previsualizado, igual que la fórmula del Excel.
+  const stockPreview = calcularStock({
+    stockInicial,
+    ventaDetal,
+    ventaMayorista: item.ventaMayorista,
+    regalos: item.regalos,
+  });
+
   const guardar = async () => {
     setError("");
-    const patch = {
-      fila: item.fila,
-      stock,
-      precioCompra: nCompra,
-      precioMayorista: parseNumero(precioMayorista),
-      precioDetal: nDetal,
-      estado,
-    };
     setGuardando(true);
     try {
       const res = await fetch("/api/inventario", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(patch),
+        body: JSON.stringify({
+          fila: item.fila,
+          stockInicial,
+          ventaDetal,
+          precioCompra: nCompra,
+          precioMayorista: parseNumero(precioMayorista),
+          precioDetal: nDetal,
+          estado,
+        }),
       });
       const data = await res.json();
       if (!res.ok || !data.ok) {
@@ -58,7 +70,9 @@ export default function EditorProducto({ item, onCerrar, onGuardado }: Props) {
         return;
       }
       onGuardado(item.fila, {
-        stock,
+        stock: stockPreview,
+        stockInicial,
+        ventaDetal,
         precioCompra: nCompra,
         precioMayorista: parseNumero(precioMayorista),
         precioDetal: nDetal,
@@ -91,15 +105,32 @@ export default function EditorProducto({ item, onCerrar, onGuardado }: Props) {
           </button>
         </div>
 
-        {/* Stock con stepper */}
-        <label className="mb-1.5 block font-sans text-[10px] uppercase tracking-[0.2em] text-warm-gray">
-          Stock disponible
+        {/* Stock disponible: calculado (solo lectura) */}
+        <div className="mb-4 flex items-end justify-between border border-blush bg-bg-card px-4 py-3">
+          <div>
+            <p className="font-sans text-[10px] uppercase tracking-[0.2em] text-warm-gray">
+              Stock disponible
+            </p>
+            <p className="font-sans text-[10px] text-warm-gray">calculado por el Excel</p>
+          </div>
+          <p
+            className={`font-serif text-3xl font-semibold ${
+              stockPreview > 0 ? "text-cacao" : "text-red-600"
+            }`}
+          >
+            {stockPreview}
+          </p>
+        </div>
+
+        {/* Registrar venta (detal) */}
+        <label className="mb-1.5 flex items-center gap-1.5 font-sans text-[10px] uppercase tracking-[0.2em] text-warm-gray">
+          <ShoppingCart size={12} /> Ventas al detal
         </label>
         <div className="flex items-stretch">
           <button
             type="button"
-            onClick={() => setStock((s) => Math.max(0, s - 1))}
-            aria-label="Restar uno"
+            onClick={() => setVentaDetal((v) => Math.max(0, v - 1))}
+            aria-label="Quitar una venta"
             className="flex w-12 items-center justify-center border border-blush bg-bg-card text-cacao active:bg-beige"
           >
             <Minus size={16} />
@@ -108,19 +139,57 @@ export default function EditorProducto({ item, onCerrar, onGuardado }: Props) {
             type="number"
             inputMode="numeric"
             min={0}
-            value={stock}
-            onChange={(e) => setStock(Math.max(0, Math.round(Number(e.target.value) || 0)))}
+            value={ventaDetal}
+            onChange={(e) => setVentaDetal(Math.max(0, Math.round(Number(e.target.value) || 0)))}
             className="w-full border-y border-blush bg-bg-card px-3 py-3 text-center font-serif text-2xl text-cacao outline-none focus:border-gold"
           />
           <button
             type="button"
-            onClick={() => setStock((s) => s + 1)}
-            aria-label="Sumar uno"
+            onClick={() => setVentaDetal((v) => v + 1)}
+            disabled={stockPreview <= 0}
+            aria-label="Registrar una venta"
+            className="flex w-12 items-center justify-center border border-blush bg-warm-black text-on-dark active:bg-gold-dark disabled:opacity-40"
+          >
+            <Plus size={16} />
+          </button>
+        </div>
+        <p className="mt-1 font-sans text-[11px] text-warm-gray">
+          Cada venta baja el stock. {item.ventaDetal > 0 && `Van ${item.ventaDetal} registradas.`}
+        </p>
+
+        {/* Reabastecer (stock inicial) */}
+        <label className="mb-1.5 mt-4 flex items-center gap-1.5 font-sans text-[10px] uppercase tracking-[0.2em] text-warm-gray">
+          <PackagePlus size={12} /> Stock inicial (entradas)
+        </label>
+        <div className="flex items-stretch">
+          <button
+            type="button"
+            onClick={() => setStockInicial((v) => Math.max(0, v - 1))}
+            aria-label="Restar una entrada"
+            className="flex w-12 items-center justify-center border border-blush bg-bg-card text-cacao active:bg-beige"
+          >
+            <Minus size={16} />
+          </button>
+          <input
+            type="number"
+            inputMode="numeric"
+            min={0}
+            value={stockInicial}
+            onChange={(e) => setStockInicial(Math.max(0, Math.round(Number(e.target.value) || 0)))}
+            className="w-full border-y border-blush bg-bg-card px-3 py-3 text-center font-serif text-xl text-cacao outline-none focus:border-gold"
+          />
+          <button
+            type="button"
+            onClick={() => setStockInicial((v) => v + 1)}
+            aria-label="Sumar una entrada"
             className="flex w-12 items-center justify-center border border-blush bg-bg-card text-cacao active:bg-beige"
           >
             <Plus size={16} />
           </button>
         </div>
+        <p className="mt-1 font-sans text-[11px] text-warm-gray">
+          Súbelo cuando compres más unidades.
+        </p>
 
         {/* Precios */}
         <div className="mt-4 grid grid-cols-2 gap-3">

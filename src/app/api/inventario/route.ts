@@ -23,7 +23,8 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Fila inválida" }, { status: 400 });
     }
     await actualizarProducto(fila, {
-      stock: body.stock,
+      stockInicial: body.stockInicial,
+      ventaDetal: body.ventaDetal,
       precioCompra: body.precioCompra,
       precioMayorista: body.precioMayorista,
       precioDetal: body.precioDetal,

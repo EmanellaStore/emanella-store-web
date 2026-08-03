@@ -12,9 +12,15 @@ export const ESTADOS = [
 
 export type Estado = (typeof ESTADOS)[number];
 
-/** Campos editables desde la app y su encabezado en el Excel. */
+/**
+ * Campos editables desde la app y su columna en el Excel. OJO: NO se edita
+ * "Stock Disponible" porque es una FÓRMULA en el Excel
+ * (= Stock Inicial − Venta Detal − Venta Mayorista − Regalos). En su lugar se
+ * editan las entradas: Venta Detal (registrar ventas) y Stock Inicial (reabastecer).
+ */
 export type CampoInventario =
-  | "stock"
+  | "stockInicial"
+  | "ventaDetal"
   | "precioCompra"
   | "precioMayorista"
   | "precioDetal"
@@ -25,11 +31,29 @@ export interface InventarioItem {
   fila: number;
   nombre: string;
   tipo: string;
+  /** Stock Disponible: valor calculado por la fórmula del Excel (solo lectura). */
   stock: number;
+  stockInicial: number;
+  ventaDetal: number;
+  ventaMayorista: number;
+  regalos: number;
   precioCompra: number;
   precioMayorista: number;
   precioDetal: number;
   estado: string;
+}
+
+/**
+ * Calcula el stock disponible como lo hace el Excel. Sirve para previsualizar el
+ * resultado en la app antes de que la fórmula recalcule en la hoja.
+ */
+export function calcularStock(item: {
+  stockInicial: number;
+  ventaDetal: number;
+  ventaMayorista: number;
+  regalos: number;
+}): number {
+  return item.stockInicial - item.ventaDetal - item.ventaMayorista - item.regalos;
 }
 
 export function formatMoney(n: number | string): string {
@@ -78,7 +102,11 @@ export function letraColumna(indice: number): string {
 export interface Columnas {
   nombre: number;
   tipo: number;
-  stock: number;
+  stock: number; // Stock Disponible (fórmula, solo lectura)
+  stockInicial: number;
+  ventaDetal: number;
+  ventaMayorista: number;
+  regalos: number;
   precioCompra: number;
   precioMayorista: number;
   precioDetal: number;
@@ -97,6 +125,11 @@ export function resolverColumnas(fila: unknown[]): Columnas | null {
     if (h === "nombre del articulo") cols.nombre = i;
     else if (h === "tipo") cols.tipo = i;
     else if (h === "stock disponible") cols.stock = i;
+    else if (h === "stock inicial") cols.stockInicial = i;
+    // "venta detal" = contador de ventas (entrada de la fórmula). NO es "precio detal".
+    else if (h === "venta detal") cols.ventaDetal = i;
+    else if (h === "venta mayorista") cols.ventaMayorista = i;
+    else if (h === "regalos") cols.regalos = i;
     else if (h === "precio compra") cols.precioCompra = i;
     else if (h === "precio mayorista") cols.precioMayorista = i;
     // "precio detal" / "precio deltal" (el público). Ojo: NO es "venta detal".
@@ -115,6 +148,10 @@ export function resolverColumnas(fila: unknown[]): Columnas | null {
     nombre: cols.nombre,
     tipo: cols.tipo ?? -1,
     stock: cols.stock,
+    stockInicial: cols.stockInicial ?? -1,
+    ventaDetal: cols.ventaDetal ?? -1,
+    ventaMayorista: cols.ventaMayorista ?? -1,
+    regalos: cols.regalos ?? -1,
     precioCompra: cols.precioCompra ?? -1,
     precioMayorista: cols.precioMayorista ?? -1,
     precioDetal: cols.precioDetal,
@@ -125,8 +162,10 @@ export function resolverColumnas(fila: unknown[]): Columnas | null {
 /** Columna (0-based) del Excel para cada campo editable, según el mapa resuelto. */
 export function columnaDeCampo(campo: CampoInventario, cols: Columnas): number {
   switch (campo) {
-    case "stock":
-      return cols.stock;
+    case "stockInicial":
+      return cols.stockInicial;
+    case "ventaDetal":
+      return cols.ventaDetal;
     case "precioCompra":
       return cols.precioCompra;
     case "precioMayorista":

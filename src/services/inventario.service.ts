@@ -60,11 +60,16 @@ export async function getInventario(): Promise<{
     const fila = filas[i];
     const nombre = String(fila[cols.nombre] ?? "").trim();
     if (!nombre) break; // fin de la tabla principal (empieza otra o hay vacío)
+    const num = (col: number) => (col >= 0 ? Math.round(parseNumero(fila[col])) : 0);
     items.push({
       fila: i + 1, // número de fila real en el Excel (1-based)
       nombre,
       tipo: cols.tipo >= 0 ? String(fila[cols.tipo] ?? "").trim() : "",
-      stock: Math.round(parseNumero(fila[cols.stock])),
+      stock: num(cols.stock),
+      stockInicial: num(cols.stockInicial),
+      ventaDetal: num(cols.ventaDetal),
+      ventaMayorista: num(cols.ventaMayorista),
+      regalos: num(cols.regalos),
       precioCompra:
         cols.precioCompra >= 0 ? parseNumero(fila[cols.precioCompra]) : 0,
       precioMayorista:
@@ -86,7 +91,8 @@ async function getLayout(): Promise<Layout> {
 }
 
 export interface PatchInventario {
-  stock?: number;
+  stockInicial?: number;
+  ventaDetal?: number;
   precioCompra?: number;
   precioMayorista?: number;
   precioDetal?: number;
@@ -94,8 +100,9 @@ export interface PatchInventario {
 }
 
 /**
- * Actualiza una fila del Excel con los campos dados. Escribe solo en las
- * columnas editables (nunca en las de fórmula). Valida estado y números.
+ * Actualiza una fila del Excel con los campos dados. Escribe solo en las columnas
+ * de ENTRADA (Stock Inicial, Venta Detal, precios, estado); nunca en Stock
+ * Disponible ni en las demás columnas de fórmula. Valida estado y números.
  */
 export async function actualizarProducto(
   fila: number,
@@ -114,10 +121,17 @@ export async function actualizarProducto(
     celdas.push({ rango: `${letraColumna(colIdx)}${fila}`, valor });
   };
 
-  if (patch.stock != null) {
-    const n = Math.round(Number(patch.stock));
-    if (!Number.isFinite(n) || n < 0) throw new Error("Stock inválido");
-    pushCelda("stock", n);
+  if (patch.stockInicial != null) {
+    const n = Math.round(Number(patch.stockInicial));
+    if (!Number.isFinite(n) || n < 0) throw new Error("Stock inicial inválido");
+    if (cols.stockInicial < 0) throw new Error("El Excel no tiene columna Stock Inicial");
+    pushCelda("stockInicial", n);
+  }
+  if (patch.ventaDetal != null) {
+    const n = Math.round(Number(patch.ventaDetal));
+    if (!Number.isFinite(n) || n < 0) throw new Error("Venta detal inválida");
+    if (cols.ventaDetal < 0) throw new Error("El Excel no tiene columna Venta Detal");
+    pushCelda("ventaDetal", n);
   }
   if (patch.precioCompra != null) {
     const n = Math.round(Number(patch.precioCompra));
