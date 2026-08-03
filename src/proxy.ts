@@ -21,14 +21,20 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  // Cartera (fiados): abierta a ADMIN y al usuario compartido con rol CARTERA
-  if (pathname.startsWith("/cartera") || pathname.startsWith("/api/cartera")) {
+  // Cartera (fiados) e Inventario: abiertos a ADMIN y al usuario compartido (CARTERA)
+  if (
+    pathname.startsWith("/cartera") ||
+    pathname.startsWith("/api/cartera") ||
+    pathname.startsWith("/inventario") ||
+    pathname.startsWith("/api/inventario")
+  ) {
     const allowed = session && (session.role === "ADMIN" || session.role === "CARTERA");
     if (!allowed) {
       if (pathname.startsWith("/api/")) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
-      return NextResponse.redirect(new URL("/login?destino=cartera", request.url));
+      const destino = pathname.startsWith("/inventario") ? "inventario" : "cartera";
+      return NextResponse.redirect(new URL(`/login?destino=${destino}`, request.url));
     }
   }
 
@@ -51,6 +57,8 @@ export const config = {
     "/api/admin/:path*",
     "/cartera/:path*",
     "/api/cartera/:path*",
+    "/inventario/:path*",
+    "/api/inventario/:path*",
     "/login",
   ],
 };

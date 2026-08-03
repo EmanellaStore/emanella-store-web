@@ -11,7 +11,7 @@ import CartSyncProvider from "@/components/shop/CartSyncProvider";
 import CartDrawer from "@/components/shop/CartDrawer";
 import WelcomeCaptureModal from "@/components/shop/WelcomeCaptureModel";
 
-const RUTAS_INTERNAS = ["/admin", "/cartera", "/login", "/reset-password"];
+const RUTAS_INTERNAS = ["/admin", "/cartera", "/inventario", "/login", "/reset-password"];
 
 export default function TiendaOverlays() {
   const pathname = usePathname() ?? "";
