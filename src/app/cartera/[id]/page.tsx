@@ -53,8 +53,13 @@ export default async function FichaClientePage({ params }: Props) {
       .map(
         (v) =>
           `• ${formatFecha(v.fecha)} — ${v.items
-            .map((i) => (i.cantidad > 1 ? `${i.cantidad}x ${i.descripcion}` : i.descripcion))
-            .join(", ")}: ${formatMoney(Number(v.total))}`
+            .map(
+              (i) =>
+                `${i.cantidad > 1 ? `${i.cantidad}x ` : ""}${i.descripcion}: ${formatMoney(
+                  Number(i.precio) * i.cantidad
+                )}`
+            )
+            .join(", ")}`
       ),
     ...(cliente.abonos.length
       ? ["", `Abonos: ${formatMoney(cliente.totalAbonos)}`]
@@ -168,14 +173,22 @@ export default async function FichaClientePage({ params }: Props) {
                       <BotonEliminarMovimiento tipo={m.tipo} id={m.id} />
                     </span>
                   </div>
-                  {m.tipo === "venta" && (
-                    <p className="font-sans text-xs text-cacao-light">
-                      {m.items
-                        .map((i) =>
-                          i.cantidad > 1 ? `${i.cantidad}x ${i.descripcion}` : i.descripcion
-                        )
-                        .join(", ")}
-                    </p>
+                  {m.tipo === "venta" && m.items.length > 0 && (
+                    <ul className="mt-1 space-y-0.5">
+                      {m.items.map((i) => (
+                        <li
+                          key={i.id}
+                          className="flex items-baseline justify-between gap-2 font-sans text-xs text-cacao-light"
+                        >
+                          <span className="min-w-0 truncate">
+                            {i.cantidad > 1 ? `${i.cantidad}x ${i.descripcion}` : i.descripcion}
+                          </span>
+                          <span className="shrink-0 text-warm-gray">
+                            {formatMoney(Number(i.precio) * i.cantidad)}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
                   )}
                   <p className="mt-0.5 font-sans text-[11px] text-warm-gray">
                     {formatFecha(m.fecha)}
