@@ -1,6 +1,12 @@
 // src/app/api/cartera/ventas/route.ts — registrar una venta (fiada o de contado).
 import { NextRequest, NextResponse } from "next/server";
-import { crearVenta, anularVenta, eliminarVenta } from "@/services/cartera.service";
+import {
+  crearVenta,
+  anularVenta,
+  eliminarVenta,
+  invalidarCacheInventario,
+} from "@/services/cartera.service";
+import { descontarPorVenta } from "@/services/inventario.service";
 import { getSession } from "@/lib/session";
 import { parseFechaLocal } from "@/lib/cartera";
 
@@ -22,7 +28,19 @@ export async function POST(req: NextRequest) {
       createdBy: session?.name ?? null,
     });
 
-    return NextResponse.json({ ok: true, venta });
+    // Descuenta las unidades vendidas del Excel (Venta Detal). Best-effort: si el
+    // Excel no responde, la venta igual queda registrada.
+    let inventario: { descontados: number; sinCoincidencia: string[] } | null = null;
+    try {
+      inventario = await descontarPorVenta(
+        venta.items.map((i) => ({ descripcion: i.descripcion, cantidad: i.cantidad }))
+      );
+      invalidarCacheInventario();
+    } catch (e) {
+      console.error("No se pudo descontar del inventario:", e);
+    }
+
+    return NextResponse.json({ ok: true, venta, inventario });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "No se pudo registrar la venta";
     return NextResponse.json({ error: msg }, { status: 400 });

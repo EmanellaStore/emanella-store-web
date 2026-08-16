@@ -72,3 +72,15 @@ export async function escribirCeldas(celdas: CeldaEscritura[]): Promise<void> {
     updates: celdas.map((c) => ({ range: c.rango, value: c.valor })),
   });
 }
+
+/**
+ * Agrega un producto nuevo al final de la tabla. El script inserta la fila,
+ * copia las fórmulas de la fila de arriba y llena los campos recibidos.
+ * Devuelve el número de fila creada.
+ */
+export async function agregarFila(
+  valores: Record<string, string | number>
+): Promise<number> {
+  const data = await callScript({ action: "append", valores });
+  return Number(data.fila);
+}

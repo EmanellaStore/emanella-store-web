@@ -68,6 +68,22 @@ INVENTARIO_SCRIPT_URL=https://script.google.com/macros/s/AKfycb.../exec
 INVENTARIO_SCRIPT_SECRET=b0f70bfFm-1lhtYw_ne_upyr_8lYaMDs
 ```
 
+## Actualizar el script (para "Agregar producto")
+
+La función de **agregar un producto nuevo** desde la app necesita una versión más
+nueva del script (acción `append`). Para activarla:
+
+1. Abre el Excel → **Extensiones → Apps Script**.
+2. Reemplaza todo con el contenido actualizado de
+   `scripts/inventario-apps-script.gs` (recuerda volver a poner tu `SECRETO`).
+3. **Implementar → Gestionar implementaciones → editar (lápiz) → Versión: Nueva →
+   Implementar.** Así la **misma URL** queda con el código nuevo (no hay que tocar
+   Vercel).
+
+El script agrega la fila al final de la tabla y **copia las fórmulas de la fila de
+arriba** (Stock Disponible, Inversión, Ganancias, Utilidad), así el producto nuevo
+se comporta igual que los demás.
+
 ## Si cambias el script después
 
 Cada vez que edites el `.gs`, debes **Implementar → Gestionar implementaciones →

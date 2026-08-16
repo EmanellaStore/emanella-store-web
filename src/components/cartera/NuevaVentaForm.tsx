@@ -13,8 +13,8 @@ interface ClienteSugerido {
 }
 
 interface ProductoSugerido {
-  productId: string;
-  variantId: string;
+  productId: string | null;
+  variantId: string | null;
   nombre: string;
   presentacion: string;
   precio: number;
@@ -104,7 +104,7 @@ export default function NuevaVentaForm({
     setItems((prev) => [
       ...prev,
       {
-        key: `${p.variantId}-${Date.now()}`,
+        key: `${p.variantId ?? p.nombre}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         productId: p.productId,
         variantId: p.variantId,
         descripcion: p.nombre,

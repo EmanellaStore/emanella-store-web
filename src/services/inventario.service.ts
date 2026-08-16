@@ -3,6 +3,7 @@
 import {
   leerHoja,
   escribirCeldas,
+  agregarFila,
   sheetsConfigurado,
 } from "@/lib/google-sheets";
 import {
@@ -157,4 +158,106 @@ export async function actualizarProducto(
 
   if (celdas.length === 0) throw new Error("Nada que actualizar");
   await escribirCeldas(celdas);
+}
+
+export interface NuevoProducto {
+  nombre: string;
+  tipo?: string;
+  stockInicial?: number;
+  precioCompra?: number;
+  precioMayorista?: number;
+  precioDetal?: number;
+  estado?: string;
+}
+
+/**
+ * Agrega un producto nuevo al Excel (fila nueva con las fórmulas copiadas de la
+ * fila de arriba). Devuelve el número de fila creada.
+ */
+export async function agregarProducto(datos: NuevoProducto): Promise<number> {
+  const nombre = String(datos.nombre ?? "").trim();
+  if (!nombre) throw new Error("El nombre es obligatorio");
+
+  const valores: Record<string, string | number> = { nombre };
+
+  if (datos.tipo && datos.tipo.trim()) valores.tipo = datos.tipo.trim();
+
+  const numero = (v: unknown, etiqueta: string): number | null => {
+    if (v == null || v === "") return null;
+    const n = Math.round(Number(v));
+    if (!Number.isFinite(n) || n < 0) throw new Error(`${etiqueta} inválido`);
+    return n;
+  };
+
+  const si = numero(datos.stockInicial, "Stock inicial");
+  if (si != null) valores.stockInicial = si;
+  const pc = numero(datos.precioCompra, "Precio de compra");
+  if (pc != null) valores.precioCompra = pc;
+  const pm = numero(datos.precioMayorista, "Precio mayorista");
+  if (pm != null) valores.precioMayorista = pm;
+  const pd = numero(datos.precioDetal, "Precio detal");
+  if (pd != null) valores.precioDetal = pd;
+
+  if (datos.estado) {
+    const estado = String(datos.estado).trim();
+    const valido = ESTADOS.some((e) => normalizar(e) === normalizar(estado));
+    if (!valido) throw new Error("Estado inválido");
+    valores.estado = estado;
+  }
+
+  const fila = await agregarFila(valores);
+  layoutCache = null; // por si la tabla creció; se recalcula en la próxima lectura
+  return fila;
+}
+
+export interface LineaVenta {
+  descripcion: string;
+  cantidad: number;
+}
+
+/**
+ * Descuenta del Excel las unidades vendidas: por cada producto (emparejado por
+ * nombre con la tabla) le suma la cantidad a "Venta Detal", y la fórmula del
+ * Excel baja el Stock Disponible. Los ítems que no existen en el inventario
+ * (texto libre) se ignoran. Devuelve cuántos se descontaron y cuáles no cuadraron.
+ */
+export async function descontarPorVenta(
+  lineas: LineaVenta[]
+): Promise<{ descontados: number; sinCoincidencia: string[] }> {
+  const items = (lineas ?? []).filter((l) => l && l.descripcion);
+  if (items.length === 0) return { descontados: 0, sinCoincidencia: [] };
+
+  const { items: inventario } = await getInventario();
+  const porNombre = new Map<string, InventarioItem>();
+  for (const it of inventario) porNombre.set(normalizar(it.nombre), it);
+
+  // Agrupa por fila (por si el mismo producto va en dos líneas).
+  const incrementos = new Map<number, { item: InventarioItem; cantidad: number }>();
+  const sinCoincidencia: string[] = [];
+  for (const l of items) {
+    const cant = Math.max(1, Math.round(Number(l.cantidad) || 1));
+    const match = porNombre.get(normalizar(l.descripcion));
+    if (!match) {
+      sinCoincidencia.push(l.descripcion);
+      continue;
+    }
+    const prev = incrementos.get(match.fila);
+    if (prev) prev.cantidad += cant;
+    else incrementos.set(match.fila, { item: match, cantidad: cant });
+  }
+
+  if (incrementos.size === 0) return { descontados: 0, sinCoincidencia };
+
+  const { cols } = await getLayout();
+  if (cols.ventaDetal < 0) {
+    throw new Error("El Excel no tiene columna Venta Detal");
+  }
+  const letra = letraColumna(cols.ventaDetal);
+  const celdas = [...incrementos.values()].map(({ item, cantidad }) => ({
+    rango: `${letra}${item.fila}`,
+    valor: item.ventaDetal + cantidad,
+  }));
+  await escribirCeldas(celdas);
+
+  return { descontados: incrementos.size, sinCoincidencia };
 }

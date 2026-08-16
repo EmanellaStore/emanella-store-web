@@ -3,6 +3,8 @@
 // Las ventas de CONTADO nacen con un abono automático por el total, así el saldo
 // queda en cero y el historial conserva el movimiento completo.
 import db from "@/lib/db";
+import { getInventario } from "./inventario.service";
+import { normalizar, type InventarioItem } from "@/lib/inventario";
 
 export interface ItemVentaInput {
   productId?: string | null;
@@ -293,37 +295,53 @@ export async function eliminarCliente(clienteId: string) {
  * Incluye los productos en **borrador**: se fía mercancía que todavía no está
  * publicada en la tienda (p. ej. el Club de Nuit Lion Heart).
  */
+// El buscador de la cartera lee del Excel (fuente de la verdad del inventario),
+// no de Neon. Caché corto para que escribir sea ágil sin golpear el Apps Script
+// en cada tecla.
+let invCache: { items: InventarioItem[]; exp: number } | null = null;
+const INV_TTL = 60 * 1000;
+
+async function inventarioParaBuscar(): Promise<InventarioItem[]> {
+  if (invCache && invCache.exp > Date.now()) return invCache.items;
+  const { items } = await getInventario();
+  invCache = { items, exp: Date.now() + INV_TTL };
+  return items;
+}
+
+/** Invalida el caché del buscador (p. ej. tras agregar un producto). */
+export function invalidarCacheInventario() {
+  invCache = null;
+}
+
 export async function buscarProductosCatalogo(q: string) {
   const termino = q.trim();
   if (termino.length < 2) return [];
 
   // Cada palabra debe aparecer en el nombre: "mallow madness" encuentra
   // "Lattafa Mallow Madness"; "mantequilla" encuentra las de Victoria's Secret.
-  const palabras = termino.split(/\s+/).slice(0, 4);
+  const palabras = normalizar(termino).split(/\s+/).slice(0, 4);
 
-  const productos = await db.product.findMany({
-    where: {
-      AND: palabras.map((p) => ({
-        name: { contains: p, mode: "insensitive" as const },
-      })),
-    },
-    include: {
-      variants: { orderBy: { price: "asc" } },
-      images: { orderBy: { position: "asc" }, take: 1 },
-    },
-    orderBy: [{ isActive: "desc" }, { name: "asc" }],
-    take: 12,
+  const items = await inventarioParaBuscar();
+  const encontrados = items.filter((it) => {
+    const n = normalizar(it.nombre);
+    return palabras.every((p) => n.includes(p));
   });
 
-  return productos.flatMap((p) =>
-    p.variants.map((v) => ({
-      productId: p.id,
-      variantId: v.id,
-      nombre: p.name,
-      presentacion: v.attributeValue,
-      precio: Number(v.price),
-      imagen: p.images[0]?.imageUrl ?? null,
-      borrador: !p.isActive,
-    }))
-  );
+  // En stock primero, luego por nombre.
+  encontrados.sort((a, b) => {
+    const sa = a.stock > 0 ? 0 : 1;
+    const sb = b.stock > 0 ? 0 : 1;
+    if (sa !== sb) return sa - sb;
+    return a.nombre.localeCompare(b.nombre);
+  });
+
+  return encontrados.slice(0, 20).map((it) => ({
+    productId: null,
+    variantId: null,
+    nombre: it.nombre,
+    presentacion: it.stock > 0 ? `${it.stock} en stock` : "Agotado",
+    precio: it.precioDetal,
+    stock: it.stock,
+    borrador: false,
+  }));
 }

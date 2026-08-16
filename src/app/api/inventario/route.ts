@@ -1,7 +1,12 @@
 // src/app/api/inventario/route.ts — leer y actualizar el inventario (Excel).
 // El acceso lo controla el proxy (ADMIN o CARTERA).
 import { NextRequest, NextResponse } from "next/server";
-import { getInventario, actualizarProducto } from "@/services/inventario.service";
+import {
+  getInventario,
+  actualizarProducto,
+  agregarProducto,
+} from "@/services/inventario.service";
+import { invalidarCacheInventario } from "@/services/cartera.service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,6 +36,28 @@ export async function PATCH(req: NextRequest) {
       estado: body.estado,
     });
     return NextResponse.json({ ok: true });
+  } catch (e) {
+    return NextResponse.json({ ok: false, error: mensajeError(e) }, { status: 400 });
+  }
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+    if (!body?.nombre || !String(body.nombre).trim()) {
+      return NextResponse.json({ ok: false, error: "El nombre es obligatorio" }, { status: 400 });
+    }
+    const fila = await agregarProducto({
+      nombre: body.nombre,
+      tipo: body.tipo,
+      stockInicial: body.stockInicial,
+      precioCompra: body.precioCompra,
+      precioMayorista: body.precioMayorista,
+      precioDetal: body.precioDetal,
+      estado: body.estado,
+    });
+    invalidarCacheInventario(); // el nuevo producto aparece ya en el buscador de la cartera
+    return NextResponse.json({ ok: true, fila });
   } catch (e) {
     return NextResponse.json({ ok: false, error: mensajeError(e) }, { status: 400 });
   }

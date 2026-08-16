@@ -3,13 +3,14 @@
 // Lista del inventario (desde el Excel) con buscador, filtros y edición.
 // Cada guardado escribe de vuelta en el Excel vía /api/inventario.
 import { useMemo, useState } from "react";
-import { Search, RefreshCw } from "lucide-react";
+import { Search, RefreshCw, Plus } from "lucide-react";
 import {
   formatMoney,
   normalizar,
   type InventarioItem,
 } from "@/lib/inventario";
 import EditorProducto from "./EditorProducto";
+import NuevoProducto from "./NuevoProducto";
 
 type Filtro = "todos" | "stock" | "agotado" | "comprar";
 
@@ -36,6 +37,7 @@ export default function InventarioLista({
   const [q, setQ] = useState("");
   const [filtro, setFiltro] = useState<Filtro>("todos");
   const [editando, setEditando] = useState<InventarioItem | null>(null);
+  const [creando, setCreando] = useState(false);
   const [refrescando, setRefrescando] = useState(false);
 
   const resumen = useMemo(() => {
@@ -144,6 +146,15 @@ export default function InventarioLista({
         ))}
       </div>
 
+      {/* Agregar producto */}
+      <button
+        type="button"
+        onClick={() => setCreando(true)}
+        className="flex w-full items-center justify-center gap-2 border border-dashed border-gold-dark py-3 font-sans text-[11px] uppercase tracking-[0.2em] text-gold-dark active:bg-beige"
+      >
+        <Plus size={14} /> Nuevo producto
+      </button>
+
       {/* Lista */}
       {filtrados.length === 0 ? (
         <div className="border border-blush bg-bg-card px-5 py-12 text-center">
@@ -191,6 +202,16 @@ export default function InventarioLista({
           item={editando}
           onCerrar={() => setEditando(null)}
           onGuardado={onGuardado}
+        />
+      )}
+
+      {creando && (
+        <NuevoProducto
+          onCerrar={() => setCreando(false)}
+          onCreado={() => {
+            setCreando(false);
+            refrescar();
+          }}
         />
       )}
     </div>
