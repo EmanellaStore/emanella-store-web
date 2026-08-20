@@ -12,6 +12,9 @@ export const ESTADOS = [
 
 export type Estado = (typeof ESTADOS)[number];
 
+/** Estado que se asigna solo cuando una venta deja el stock en 0. */
+export const ESTADO_AGOTADO: Estado = "Se debe volver a comprar";
+
 /**
  * Campos editables desde la app y su columna en el Excel. OJO: NO se edita
  * "Stock Disponible" porque es una FÓRMULA en el Excel

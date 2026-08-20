@@ -7,6 +7,7 @@ import { useState } from "react";
 import { X, Minus, Plus, ShoppingCart, PackagePlus } from "lucide-react";
 import {
   ESTADOS,
+  ESTADO_AGOTADO,
   formatMoney,
   parseNumero,
   calcularStock,
@@ -46,6 +47,21 @@ export default function EditorProducto({ item, onCerrar, onGuardado }: Props) {
     ventaMayorista: item.ventaMayorista,
     regalos: item.regalos,
   });
+
+  // Registrar una venta: si deja el stock en 0, el artículo se marca solo como
+  // "Se debe volver a comprar" (igual que la regla del Excel). Se puede corregir
+  // a mano abajo antes de guardar.
+  const registrarVenta = () => {
+    const nuevo = ventaDetal + 1;
+    setVentaDetal(nuevo);
+    const restante = calcularStock({
+      stockInicial,
+      ventaDetal: nuevo,
+      ventaMayorista: item.ventaMayorista,
+      regalos: item.regalos,
+    });
+    if (restante <= 0 && estado !== ESTADO_AGOTADO) setEstado(ESTADO_AGOTADO);
+  };
 
   const guardar = async () => {
     setError("");
@@ -145,7 +161,7 @@ export default function EditorProducto({ item, onCerrar, onGuardado }: Props) {
           />
           <button
             type="button"
-            onClick={() => setVentaDetal((v) => v + 1)}
+            onClick={registrarVenta}
             disabled={stockPreview <= 0}
             aria-label="Registrar una venta"
             className="flex w-12 items-center justify-center border border-blush bg-warm-black text-on-dark active:bg-gold-dark disabled:opacity-40"

@@ -3,6 +3,7 @@
 import {
   leerHoja,
   escribirCeldas,
+  escribirEstados,
   agregarFila,
   sheetsConfigurado,
 } from "@/lib/google-sheets";
@@ -12,7 +13,9 @@ import {
   letraColumna,
   parseNumero,
   normalizar,
+  calcularStock,
   ESTADOS,
+  ESTADO_AGOTADO,
   type Columnas,
   type InventarioItem,
   type CampoInventario,
@@ -210,6 +213,30 @@ export async function agregarProducto(datos: NuevoProducto): Promise<number> {
   return fila;
 }
 
+/**
+ * Escribe el Estado de varias filas pintando la casilla igual que las demás que
+ * ya tienen ese estado. Si el Apps Script desplegado todavía no trae la acción
+ * `estado`, cae a escribir solo el texto (sin color) en vez de fallar.
+ */
+export async function marcarEstados(
+  updates: { fila: number; estado: string }[],
+  colEstado: number
+): Promise<void> {
+  if (updates.length === 0) return;
+  try {
+    await escribirEstados(updates);
+  } catch (e) {
+    if (e instanceof Error && e.message === "SHEETS_SIN_ACCION" && colEstado >= 0) {
+      const letra = letraColumna(colEstado);
+      await escribirCeldas(
+        updates.map((u) => ({ rango: `${letra}${u.fila}`, valor: u.estado }))
+      );
+      return;
+    }
+    throw e;
+  }
+}
+
 export interface LineaVenta {
   descripcion: string;
   cantidad: number;
@@ -223,9 +250,10 @@ export interface LineaVenta {
  */
 export async function descontarPorVenta(
   lineas: LineaVenta[]
-): Promise<{ descontados: number; sinCoincidencia: string[] }> {
+): Promise<{ descontados: number; sinCoincidencia: string[]; agotados: number[] }> {
   const items = (lineas ?? []).filter((l) => l && l.descripcion);
-  if (items.length === 0) return { descontados: 0, sinCoincidencia: [] };
+  if (items.length === 0)
+    return { descontados: 0, sinCoincidencia: [], agotados: [] };
 
   const { items: inventario } = await getInventario();
   const porNombre = new Map<string, InventarioItem>();
@@ -246,7 +274,7 @@ export async function descontarPorVenta(
     else incrementos.set(match.fila, { item: match, cantidad: cant });
   }
 
-  if (incrementos.size === 0) return { descontados: 0, sinCoincidencia };
+  if (incrementos.size === 0) return { descontados: 0, sinCoincidencia, agotados: [] };
 
   const { cols } = await getLayout();
   if (cols.ventaDetal < 0) {
@@ -259,5 +287,21 @@ export async function descontarPorVenta(
   }));
   await escribirCeldas(celdas);
 
-  return { descontados: incrementos.size, sinCoincidencia };
+  // Si la venta dejó el producto en 0, se marca solo como "Se debe volver a
+  // comprar" y la casilla queda pintada igual que las demás agotadas. Solo se
+  // toca el estado si cambia: los que ya están marcados se dejan quietos.
+  const aMarcar = [...incrementos.values()]
+    .filter(
+      ({ item, cantidad }) =>
+        calcularStock({ ...item, ventaDetal: item.ventaDetal + cantidad }) <= 0 &&
+        normalizar(item.estado) !== normalizar(ESTADO_AGOTADO)
+    )
+    .map(({ item }) => ({ fila: item.fila, estado: ESTADO_AGOTADO }));
+  await marcarEstados(aMarcar, cols.estado);
+
+  return {
+    descontados: incrementos.size,
+    sinCoincidencia,
+    agotados: aMarcar.map((m) => m.fila),
+  };
 }

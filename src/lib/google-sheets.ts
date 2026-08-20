@@ -73,6 +73,29 @@ export async function escribirCeldas(celdas: CeldaEscritura[]): Promise<void> {
   });
 }
 
+export interface EstadoFila {
+  fila: number;
+  estado: string;
+}
+
+/**
+ * Escribe el Estado de varias filas y además pinta la casilla copiando el color
+ * de fondo de otra fila que ya tenga ese mismo estado (así "Se debe volver a
+ * comprar" queda naranja como las demás). Si el script desplegado todavía no
+ * conoce la acción, lanza SHEETS_SIN_ACCION para que el llamador se conforme
+ * con escribir el texto.
+ */
+export async function escribirEstados(updates: EstadoFila[]): Promise<void> {
+  if (updates.length === 0) return;
+  try {
+    await callScript({ action: "estado", updates });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "";
+    if (msg.includes("accion desconocida")) throw new Error("SHEETS_SIN_ACCION");
+    throw e;
+  }
+}
+
 /**
  * Agrega un producto nuevo al final de la tabla. El script inserta la fila,
  * copia las fórmulas de la fila de arriba y llena los campos recibidos.

@@ -84,6 +84,23 @@ El script agrega la fila al final de la tabla y **copia las fórmulas de la fila
 arriba** (Stock Disponible, Inversión, Ganancias, Utilidad), así el producto nuevo
 se comporta igual que los demás.
 
+## Marcado automático de agotados
+
+Cuando una venta (desde la cartera o desde el inventario) deja un producto en
+**Stock Disponible 0**, la app le pone sola el estado **"Se debe volver a
+comprar"** y pinta la casilla **copiando el color de otra fila que ya tenga ese
+mismo estado** — no hay ningún color hardcodeado, el Excel manda. Esto usa la
+acción `estado` del script, así que también necesita el redespliegue.
+
+No toca los productos en *"Temporalmente no disponible"*: esos están en 0 a
+propósito, no por una venta.
+
+Para arreglar de una vez los que ya quedaron en 0 sin marcar:
+
+```bash
+npx tsx scripts/marcar-agotados.ts
+```
+
 ## Si cambias el script después
 
 Cada vez que edites el `.gs`, debes **Implementar → Gestionar implementaciones →

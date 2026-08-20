@@ -43,6 +43,10 @@ function doPost(e) {
       return json(agregarProducto(hoja, body.valores || {}));
     }
 
+    if (body.action === "estado") {
+      return json(marcarEstados(hoja, body.updates || []));
+    }
+
     return json({ ok: false, error: "accion desconocida" });
   } catch (err) {
     return json({ ok: false, error: String(err) });
@@ -106,6 +110,61 @@ function agregarProducto(hoja, valores) {
   if (col.ventaDetal != null) hoja.getRange(nueva, col.ventaDetal + 1).setValue(0);
 
   return { ok: true, fila: nueva };
+}
+
+/**
+ * Escribe el Estado de una o varias filas y copia el color de fondo (y de letra)
+ * de otra fila que YA tenga ese mismo estado. Así "Se debe volver a comprar"
+ * queda naranja igual que las demás agotadas, sin tener que hardcodear el color:
+ * el Excel manda. Si no hay ninguna fila de referencia, solo escribe el texto.
+ */
+function marcarEstados(hoja, updates) {
+  var matriz = hoja.getDataRange().getValues();
+
+  var headerRow = -1;
+  var col = null;
+  for (var i = 0; i < matriz.length; i++) {
+    var mapa = mapearColumnas(matriz[i]);
+    if (mapa) { headerRow = i; col = mapa; break; }
+  }
+  if (headerRow < 0) return { ok: false, error: "no se encontro la tabla" };
+
+  var colEstado = col.estado + 1; // 1-based
+  var objetivo = {};              // filas que vamos a tocar: no sirven de referencia
+  for (var u = 0; u < updates.length; u++) objetivo[Number(updates[u].fila)] = true;
+
+  // Primera fila de la tabla (que no toquemos) cuyo estado coincide.
+  function referencia(estado) {
+    var buscado = norm(estado);
+    for (var r = headerRow + 1; r < matriz.length; r++) {
+      if (!String(matriz[r][col.nombre] || "").trim()) break;
+      if (objetivo[r + 1]) continue;
+      if (norm(matriz[r][col.estado]) === buscado) return r + 1;
+    }
+    return -1;
+  }
+
+  var pintadas = 0;
+  var escritas = 0;
+  for (var k = 0; k < updates.length; k++) {
+    var fila = Number(updates[k].fila);
+    var estado = String(updates[k].estado || "");
+    if (!fila || !estado) continue;
+
+    var celda = hoja.getRange(fila, colEstado);
+    celda.setValue(estado);
+    escritas++;
+
+    var ref = referencia(estado);
+    if (ref > 0) {
+      var origen = hoja.getRange(ref, colEstado);
+      celda.setBackground(origen.getBackground());
+      celda.setFontColor(origen.getFontColor());
+      pintadas++;
+    }
+  }
+
+  return { ok: true, escritas: escritas, pintadas: pintadas };
 }
 
 /** Mapa canónico → índice de columna (0-based). null si la fila no es el encabezado. */

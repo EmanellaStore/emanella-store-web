@@ -30,7 +30,11 @@ export async function POST(req: NextRequest) {
 
     // Descuenta las unidades vendidas del Excel (Venta Detal). Best-effort: si el
     // Excel no responde, la venta igual queda registrada.
-    let inventario: { descontados: number; sinCoincidencia: string[] } | null = null;
+    let inventario: {
+      descontados: number;
+      sinCoincidencia: string[];
+      agotados: number[];
+    } | null = null;
     try {
       inventario = await descontarPorVenta(
         venta.items.map((i) => ({ descripcion: i.descripcion, cantidad: i.cantidad }))
