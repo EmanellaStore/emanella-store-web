@@ -6,6 +6,7 @@ import { getFichaCliente } from "@/services/cartera.service";
 import { formatMoney, formatFecha, estaVencida, diasDeAtraso } from "@/lib/cartera";
 import AccionesCliente from "@/components/cartera/AccionesCliente";
 import BotonEliminarMovimiento from "@/components/cartera/BotonEliminarMovimiento";
+import BotonDevolverProducto from "@/components/cartera/BotonDevolverProducto";
 import EliminarPersona from "@/components/cartera/EliminarPersona";
 
 export const revalidate = 0;
@@ -183,8 +184,14 @@ export default async function FichaClientePage({ params }: Props) {
                           <span className="min-w-0 truncate">
                             {i.cantidad > 1 ? `${i.cantidad}x ${i.descripcion}` : i.descripcion}
                           </span>
-                          <span className="shrink-0 text-warm-gray">
-                            {formatMoney(Number(i.precio) * i.cantidad)}
+                          <span className="flex shrink-0 items-center gap-1">
+                            <span className="text-warm-gray">
+                              {formatMoney(Number(i.precio) * i.cantidad)}
+                            </span>
+                            <BotonDevolverProducto
+                              itemId={i.id}
+                              descripcion={i.descripcion}
+                            />
                           </span>
                         </li>
                       ))}

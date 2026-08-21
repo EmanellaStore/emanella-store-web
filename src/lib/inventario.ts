@@ -15,6 +15,15 @@ export type Estado = (typeof ESTADOS)[number];
 /** Estado que se asigna solo cuando una venta deja el stock en 0. */
 export const ESTADO_AGOTADO: Estado = "Se debe volver a comprar";
 
+/** Estado al que vuelve un producto cuando una devolución le repone stock. */
+export const ESTADO_EN_STOCK: Estado = "En stock";
+
+/**
+ * Estado que la app NUNCA toca sola: lo pone Steven a propósito (producto que no
+ * se consigue o que no se piensa reponer), no depende de las ventas.
+ */
+export const ESTADO_NO_DISPONIBLE: Estado = "Temporalmente no disponible";
+
 /**
  * Campos editables desde la app y su columna en el Excel. OJO: NO se edita
  * "Stock Disponible" porque es una FÓRMULA en el Excel

@@ -16,6 +16,8 @@ import {
   calcularStock,
   ESTADOS,
   ESTADO_AGOTADO,
+  ESTADO_EN_STOCK,
+  ESTADO_NO_DISPONIBLE,
   type Columnas,
   type InventarioItem,
   type CampoInventario,
@@ -242,25 +244,44 @@ export interface LineaVenta {
   cantidad: number;
 }
 
+export interface ResultadoAjuste {
+  /** Cuántas filas del Excel se tocaron. */
+  descontados: number;
+  /** Ítems de texto libre que no existen en el inventario: se ignoran. */
+  sinCoincidencia: string[];
+  /** Filas que quedaron en 0 y se marcaron "Se debe volver a comprar". */
+  agotados: number[];
+  /** Filas que volvieron a tener stock y se devolvieron a "En stock". */
+  repuestos: number[];
+}
+
 /**
- * Descuenta del Excel las unidades vendidas: por cada producto (emparejado por
- * nombre con la tabla) le suma la cantidad a "Venta Detal", y la fórmula del
- * Excel baja el Stock Disponible. Los ítems que no existen en el inventario
- * (texto libre) se ignoran. Devuelve cuántos se descontaron y cuáles no cuadraron.
+ * Núcleo del movimiento de inventario. `signo` = +1 vende (sube Venta Detal,
+ * baja el Stock Disponible) y -1 devuelve (baja Venta Detal, sube el stock).
+ *
+ * Un solo camino para las dos direcciones: así una venta y su devolución no
+ * pueden quedar desalineadas. Empareja por nombre normalizado con la tabla y
+ * agrupa por fila (el mismo producto puede venir en dos líneas).
  */
-export async function descontarPorVenta(
-  lineas: LineaVenta[]
-): Promise<{ descontados: number; sinCoincidencia: string[]; agotados: number[] }> {
+async function ajustarVentaDetal(
+  lineas: LineaVenta[],
+  signo: 1 | -1
+): Promise<ResultadoAjuste> {
+  const vacio: ResultadoAjuste = {
+    descontados: 0,
+    sinCoincidencia: [],
+    agotados: [],
+    repuestos: [],
+  };
+
   const items = (lineas ?? []).filter((l) => l && l.descripcion);
-  if (items.length === 0)
-    return { descontados: 0, sinCoincidencia: [], agotados: [] };
+  if (items.length === 0) return vacio;
 
   const { items: inventario } = await getInventario();
   const porNombre = new Map<string, InventarioItem>();
   for (const it of inventario) porNombre.set(normalizar(it.nombre), it);
 
-  // Agrupa por fila (por si el mismo producto va en dos líneas).
-  const incrementos = new Map<number, { item: InventarioItem; cantidad: number }>();
+  const movimientos = new Map<number, { item: InventarioItem; cantidad: number }>();
   const sinCoincidencia: string[] = [];
   for (const l of items) {
     const cant = Math.max(1, Math.round(Number(l.cantidad) || 1));
@@ -269,39 +290,80 @@ export async function descontarPorVenta(
       sinCoincidencia.push(l.descripcion);
       continue;
     }
-    const prev = incrementos.get(match.fila);
+    const prev = movimientos.get(match.fila);
     if (prev) prev.cantidad += cant;
-    else incrementos.set(match.fila, { item: match, cantidad: cant });
+    else movimientos.set(match.fila, { item: match, cantidad: cant });
   }
 
-  if (incrementos.size === 0) return { descontados: 0, sinCoincidencia, agotados: [] };
+  if (movimientos.size === 0) return { ...vacio, sinCoincidencia };
 
   const { cols } = await getLayout();
   if (cols.ventaDetal < 0) {
     throw new Error("El Excel no tiene columna Venta Detal");
   }
-  const letra = letraColumna(cols.ventaDetal);
-  const celdas = [...incrementos.values()].map(({ item, cantidad }) => ({
-    rango: `${letra}${item.fila}`,
-    valor: item.ventaDetal + cantidad,
-  }));
-  await escribirCeldas(celdas);
 
-  // Si la venta dejó el producto en 0, se marca solo como "Se debe volver a
-  // comprar" y la casilla queda pintada igual que las demás agotadas. Solo se
-  // toca el estado si cambia: los que ya están marcados se dejan quietos.
-  const aMarcar = [...incrementos.values()]
-    .filter(
-      ({ item, cantidad }) =>
-        calcularStock({ ...item, ventaDetal: item.ventaDetal + cantidad }) <= 0 &&
-        normalizar(item.estado) !== normalizar(ESTADO_AGOTADO)
-    )
-    .map(({ item }) => ({ fila: item.fila, estado: ESTADO_AGOTADO }));
+  // Venta Detal nunca baja de 0: si se devuelve más de lo registrado (por datos
+  // viejos o una venta que nunca se descontó), se topa en 0 en vez de dejar el
+  // Excel con un negativo que rompería la fórmula del stock.
+  const nuevos = [...movimientos.values()].map(({ item, cantidad }) => ({
+    item,
+    ventaDetal: Math.max(0, item.ventaDetal + signo * cantidad),
+  }));
+
+  const letra = letraColumna(cols.ventaDetal);
+  await escribirCeldas(
+    nuevos.map(({ item, ventaDetal }) => ({
+      rango: `${letra}${item.fila}`,
+      valor: ventaDetal,
+    }))
+  );
+
+  // El estado sigue al stock resultante, en las dos direcciones. Solo se escribe
+  // si cambia, y nunca se toca "Temporalmente no disponible": ese lo pone Steven
+  // a propósito y no depende de las ventas.
+  const agotados: number[] = [];
+  const repuestos: number[] = [];
+  const aMarcar: { fila: number; estado: string }[] = [];
+
+  for (const { item, ventaDetal } of nuevos) {
+    const stock = calcularStock({ ...item, ventaDetal });
+    const actual = normalizar(item.estado);
+    if (stock <= 0 && actual !== normalizar(ESTADO_AGOTADO)) {
+      if (actual === normalizar(ESTADO_NO_DISPONIBLE)) continue;
+      aMarcar.push({ fila: item.fila, estado: ESTADO_AGOTADO });
+      agotados.push(item.fila);
+    } else if (stock > 0 && actual === normalizar(ESTADO_AGOTADO)) {
+      aMarcar.push({ fila: item.fila, estado: ESTADO_EN_STOCK });
+      repuestos.push(item.fila);
+    }
+  }
   await marcarEstados(aMarcar, cols.estado);
 
   return {
-    descontados: incrementos.size,
+    descontados: movimientos.size,
     sinCoincidencia,
-    agotados: aMarcar.map((m) => m.fila),
+    agotados,
+    repuestos,
   };
+}
+
+/**
+ * Venta: suma las unidades a "Venta Detal" y la fórmula del Excel baja el Stock
+ * Disponible. Si algo queda en 0, lo marca "Se debe volver a comprar".
+ */
+export async function descontarPorVenta(
+  lineas: LineaVenta[]
+): Promise<ResultadoAjuste> {
+  return ajustarVentaDetal(lineas, 1);
+}
+
+/**
+ * Devolución (se anuló o se borró una venta, o el cliente devolvió un producto):
+ * el inverso exacto. Baja "Venta Detal", el stock sube, y si el producto vuelve
+ * a tener unidades se devuelve a "En stock".
+ */
+export async function devolverAlInventario(
+  lineas: LineaVenta[]
+): Promise<ResultadoAjuste> {
+  return ajustarVentaDetal(lineas, -1);
 }

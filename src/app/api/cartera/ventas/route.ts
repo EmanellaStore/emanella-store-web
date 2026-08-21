@@ -6,7 +6,10 @@ import {
   eliminarVenta,
   invalidarCacheInventario,
 } from "@/services/cartera.service";
-import { descontarPorVenta } from "@/services/inventario.service";
+import {
+  descontarPorVenta,
+  devolverAlInventario,
+} from "@/services/inventario.service";
 import { getSession } from "@/lib/session";
 import { parseFechaLocal } from "@/lib/cartera";
 
@@ -57,8 +60,9 @@ export async function PATCH(req: NextRequest) {
     if (!ventaId) {
       return NextResponse.json({ error: "ventaId requerido" }, { status: 400 });
     }
-    await anularVenta(ventaId);
-    return NextResponse.json({ ok: true });
+    const { devolver } = await anularVenta(ventaId);
+    const inventario = await reponer(devolver);
+    return NextResponse.json({ ok: true, inventario });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "No se pudo anular la venta";
     return NextResponse.json({ error: msg }, { status: 400 });
@@ -71,10 +75,28 @@ export async function DELETE(req: NextRequest) {
     if (!ventaId) {
       return NextResponse.json({ error: "ventaId requerido" }, { status: 400 });
     }
-    await eliminarVenta(ventaId);
-    return NextResponse.json({ ok: true });
+    const { devolver } = await eliminarVenta(ventaId);
+    const inventario = await reponer(devolver);
+    return NextResponse.json({ ok: true, inventario });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "No se pudo eliminar la venta";
     return NextResponse.json({ error: msg }, { status: 400 });
+  }
+}
+
+/**
+ * Repone en el Excel las unidades de una venta que se deshizo. Best-effort,
+ * igual que el descuento: si el Apps Script no responde, la venta ya quedó
+ * anulada/eliminada en la cartera y el error solo se loguea.
+ */
+async function reponer(devolver: { descripcion: string; cantidad: number }[]) {
+  if (devolver.length === 0) return null;
+  try {
+    const inventario = await devolverAlInventario(devolver);
+    invalidarCacheInventario();
+    return inventario;
+  } catch (e) {
+    console.error("No se pudo reponer el inventario:", e);
+    return null;
   }
 }

@@ -260,18 +260,40 @@ export async function crearAbono(data: {
   });
 }
 
-/** Anular deja rastro (no borra). Si era de contado, se quita su abono automático. */
-export async function anularVenta(ventaId: string) {
+/** Lo que hay que devolverle al Excel cuando una venta se deshace. */
+export interface Devolucion {
+  descripcion: string;
+  cantidad: number;
+}
+
+/**
+ * Anular deja rastro (no borra). Si era de contado, se quita su abono automático.
+ * Devuelve los ítems que hay que reponer en el inventario — vacío si la venta ya
+ * estaba anulada, para no sumar el stock dos veces.
+ */
+export async function anularVenta(
+  ventaId: string
+): Promise<{ devolver: Devolucion[] }> {
   return db.$transaction(async (tx) => {
-    const venta = await tx.carteraVenta.findUnique({ where: { id: ventaId } });
+    const venta = await tx.carteraVenta.findUnique({
+      where: { id: ventaId },
+      include: { items: true },
+    });
     if (!venta) throw new Error("Venta no encontrada");
+    if (venta.anulada) return { devolver: [] }; // ya se repuso al anularla
     if (venta.tipo === "CONTADO") {
       await tx.carteraAbono.deleteMany({ where: { ventaId } });
     }
-    return tx.carteraVenta.update({
+    await tx.carteraVenta.update({
       where: { id: ventaId },
       data: { anulada: true },
     });
+    return {
+      devolver: venta.items.map((i) => ({
+        descripcion: i.descripcion,
+        cantidad: i.cantidad,
+      })),
+    };
   });
 }
 
@@ -280,9 +302,66 @@ export async function eliminarAbono(abonoId: string) {
 }
 
 /** Eliminar de verdad una venta (por si se registró por error). Sus ítems se
- *  borran en cascada; los abonos ligados quedan sueltos (ventaId → null). */
-export async function eliminarVenta(ventaId: string) {
-  return db.carteraVenta.delete({ where: { id: ventaId } });
+ *  borran en cascada; los abonos ligados quedan sueltos (ventaId → null).
+ *  Devuelve lo que hay que reponer en el inventario: vacío si ya estaba anulada
+ *  (en ese momento ya se repuso). */
+export async function eliminarVenta(
+  ventaId: string
+): Promise<{ devolver: Devolucion[] }> {
+  const venta = await db.carteraVenta.findUnique({
+    where: { id: ventaId },
+    include: { items: true },
+  });
+  if (!venta) throw new Error("Venta no encontrada");
+
+  await db.carteraVenta.delete({ where: { id: ventaId } });
+
+  if (venta.anulada) return { devolver: [] };
+  return {
+    devolver: venta.items.map((i) => ({
+      descripcion: i.descripcion,
+      cantidad: i.cantidad,
+    })),
+  };
+}
+
+/**
+ * Quitar un solo producto de una venta (el cliente devolvió uno de varios).
+ * Recalcula el total de la venta con lo que queda y devuelve la línea retirada
+ * para reponerla en el Excel. Si era el único ítem, la venta entera se elimina.
+ */
+export async function quitarItemDeVenta(
+  itemId: string
+): Promise<{ devolver: Devolucion[]; ventaEliminada: boolean; ventaId: string }> {
+  const item = await db.carteraVentaItem.findUnique({
+    where: { id: itemId },
+    include: { venta: { include: { items: true } } },
+  });
+  if (!item) throw new Error("Producto no encontrado");
+
+  const venta = item.venta;
+  const devolver: Devolucion[] = venta.anulada
+    ? [] // anulada: el stock ya se había repuesto
+    : [{ descripcion: item.descripcion, cantidad: item.cantidad }];
+
+  // Era el único producto: la venta se queda sin contenido, se elimina completa.
+  if (venta.items.length <= 1) {
+    await db.carteraVenta.delete({ where: { id: venta.id } });
+    return { devolver, ventaEliminada: true, ventaId: venta.id };
+  }
+
+  const restantes = venta.items.filter((i) => i.id !== itemId);
+  const total = restantes.reduce(
+    (s, i) => s + Number(i.precio) * i.cantidad,
+    0
+  );
+
+  await db.$transaction([
+    db.carteraVentaItem.delete({ where: { id: itemId } }),
+    db.carteraVenta.update({ where: { id: venta.id }, data: { total } }),
+  ]);
+
+  return { devolver, ventaEliminada: false, ventaId: venta.id };
 }
 
 /** Eliminar una persona y todo su historial (ventas, ítems y abonos en cascada). */
