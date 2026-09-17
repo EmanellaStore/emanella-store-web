@@ -19,18 +19,27 @@ export function formatMoney(n: number | string): string {
   return `$${Math.round(Number(n)).toLocaleString("es-CO")}`;
 }
 
-/** Corte de quincena: día 15 y último día del mes. */
-function siguienteCorte(desde: Date): Date {
+/** Plazos que se pueden pactar, en quincenas. */
+export const QUINCENAS = [1, 2, 3, 4, 5, 6] as const;
+
+/**
+ * Corte de quincena: día 15 y último día del mes. Se devuelve al mediodía a
+ * propósito: una fecha a medianoche, guardada en un servidor en UTC, se lee en
+ * Colombia (−5) como el día anterior. El mediodía deja el día calendario
+ * intacto en ambos husos.
+ */
+export function siguienteCorte(desde: Date): Date {
   const d = new Date(desde.getFullYear(), desde.getMonth(), desde.getDate());
   const ultimoDia = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-  if (d.getDate() < 15) return new Date(d.getFullYear(), d.getMonth(), 15);
-  if (d.getDate() < ultimoDia) return new Date(d.getFullYear(), d.getMonth(), ultimoDia);
-  return new Date(d.getFullYear(), d.getMonth() + 1, 15);
+  const al = (y: number, m: number, dia: number) => new Date(y, m, dia, 12, 0, 0, 0);
+  if (d.getDate() < 15) return al(d.getFullYear(), d.getMonth(), 15);
+  if (d.getDate() < ultimoDia) return al(d.getFullYear(), d.getMonth(), ultimoDia);
+  return al(d.getFullYear(), d.getMonth() + 1, 15);
 }
 
 /**
  * Fecha de pago sugerida: por defecto dos quincenas (lo habitual del negocio),
- * ajustable a más desde el formulario.
+ * ajustable de 1 a 6 desde el formulario.
  */
 export function fechaPagoSugerida(desde: Date = new Date(), quincenas = 2): Date {
   let fecha = desde;
@@ -38,6 +47,37 @@ export function fechaPagoSugerida(desde: Date = new Date(), quincenas = 2): Date
     fecha = siguienteCorte(fecha);
   }
   return fecha;
+}
+
+/**
+ * Fecha límite de una cuenta: **el compromiso más reciente**, no el más viejo.
+ *
+ * Esto es el corazón del cálculo de vencimiento y por eso vive en un solo lugar
+ * (la lista y la ficha de la persona lo usan igual). Dos cosas corren el plazo:
+ *
+ * - **Una venta nueva a crédito**: se pacta una fecha nueva y esa manda, así
+ *   haya quedado algo viejo sin pagar.
+ * - **Un abono**: da plazo hasta el siguiente corte de quincena. Premia a quien
+ *   está abonando sin perder de vista a quien se queda callado: si no vuelve a
+ *   abonar, al pasar ese corte reaparece en rojo.
+ *
+ * Devuelve null si no hay ningún compromiso (p. ej. solo ventas de contado).
+ */
+export function fechaLimiteCuenta(
+  fechasPago: (Date | string | null | undefined)[],
+  ultimoAbono?: Date | string | null
+): Date | null {
+  let limite: Date | null = null;
+  const considerar = (f: Date | null) => {
+    if (f && (!limite || f > limite)) limite = f;
+  };
+
+  for (const f of fechasPago) {
+    if (f) considerar(new Date(f));
+  }
+  if (ultimoAbono) considerar(siguienteCorte(new Date(ultimoAbono)));
+
+  return limite;
 }
 
 /**

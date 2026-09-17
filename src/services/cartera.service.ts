@@ -5,6 +5,7 @@
 import db from "@/lib/db";
 import { getInventario } from "./inventario.service";
 import { normalizar, type InventarioItem } from "@/lib/inventario";
+import { fechaLimiteCuenta } from "@/lib/cartera";
 
 export interface ItemVentaInput {
   productId?: string | null;
@@ -63,7 +64,7 @@ export async function getClientesConSaldo(opciones?: {
 
   const ids = clientes.map((c) => c.id);
 
-  const [ventas, abonos, pendientes] = await Promise.all([
+  const [ventas, abonos, pendientes, ultimosAbonos] = await Promise.all([
     db.carteraVenta.groupBy({
       by: ["clienteId"],
       _sum: { total: true },
@@ -82,18 +83,29 @@ export async function getClientesConSaldo(opciones?: {
         fechaPago: { not: null },
       },
       select: { clienteId: true, fechaPago: true },
-      orderBy: { fechaPago: "asc" },
+      // Descendente: manda el compromiso MÁS RECIENTE. Con la fecha más vieja,
+      // ni un abono ni una venta nueva sacaban a nadie del rojo.
+      orderBy: { fechaPago: "desc" },
+    }),
+    db.carteraAbono.groupBy({
+      by: ["clienteId"],
+      _max: { fecha: true },
+      where: { clienteId: { in: ids } },
     }),
   ]);
 
   const ventasPorCliente = new Map(ventas.map((v) => [v.clienteId, Number(v._sum.total ?? 0)]));
   const abonosPorCliente = new Map(abonos.map((a) => [a.clienteId, Number(a._sum.monto ?? 0)]));
-  const vencimientoPorCliente = new Map<string, Date>();
+  // La primera de cada cliente es la más tardía (orderBy desc).
+  const ultimaFechaPago = new Map<string, Date>();
   for (const p of pendientes) {
-    if (p.fechaPago && !vencimientoPorCliente.has(p.clienteId)) {
-      vencimientoPorCliente.set(p.clienteId, p.fechaPago);
+    if (p.fechaPago && !ultimaFechaPago.has(p.clienteId)) {
+      ultimaFechaPago.set(p.clienteId, p.fechaPago);
     }
   }
+  const ultimoAbonoPorCliente = new Map(
+    ultimosAbonos.map((a) => [a.clienteId, a._max.fecha])
+  );
 
   const hoy = new Date();
   hoy.setHours(0, 0, 0, 0);
@@ -103,7 +115,10 @@ export async function getClientesConSaldo(opciones?: {
       const totalVentas = ventasPorCliente.get(c.id) ?? 0;
       const totalAbonos = abonosPorCliente.get(c.id) ?? 0;
       const saldo = Math.round(totalVentas - totalAbonos);
-      const proximoVencimiento = vencimientoPorCliente.get(c.id) ?? null;
+      const proximoVencimiento = fechaLimiteCuenta(
+        [ultimaFechaPago.get(c.id) ?? null],
+        ultimoAbonoPorCliente.get(c.id) ?? null
+      );
       return {
         id: c.id,
         nombre: c.nombre,

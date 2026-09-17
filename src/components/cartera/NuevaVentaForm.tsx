@@ -4,7 +4,15 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Search, X, Plus, Minus, Check } from "lucide-react";
 import InputMonto from "./InputMonto";
-import { parseMonto, formatMoney, fechaPagoSugerida, METODOS_PAGO } from "@/lib/cartera";
+import {
+  parseMonto,
+  formatMoney,
+  formatFecha,
+  fechaPagoSugerida,
+  parseFechaLocal,
+  QUINCENAS,
+  METODOS_PAGO,
+} from "@/lib/cartera";
 
 interface ClienteSugerido {
   id: string;
@@ -384,29 +392,38 @@ export default function NuevaVentaForm({
           <label className="mb-2 block font-sans text-[10px] uppercase tracking-[0.2em] text-warm-gray">
             ¿Cuándo paga?
           </label>
-          <div className="mb-2 flex gap-2">
-            {[
-              { label: "2 quincenas", d: fechaPagoSugerida(new Date(), 2) },
-              { label: "3 quincenas", d: fechaPagoSugerida(new Date(), 3) },
-              { label: "1 quincena", d: fechaPagoSugerida(new Date(), 1) },
-            ].map((op) => {
-              const valor = aInputDate(op.d);
+          <div className="mb-1.5 grid grid-cols-6 gap-1.5">
+            {QUINCENAS.map((q) => {
+              const valor = aInputDate(fechaPagoSugerida(new Date(), q));
+              const activo = fechaPago === valor;
               return (
                 <button
-                  key={op.label}
+                  key={q}
                   type="button"
                   onClick={() => setFechaPago(valor)}
-                  className={`flex-1 border py-2.5 font-sans text-[11px] uppercase tracking-wider transition-colors ${
-                    fechaPago === valor
+                  aria-pressed={activo}
+                  className={`border py-2.5 font-serif text-base transition-colors ${
+                    activo
                       ? "border-cacao bg-warm-black text-on-dark"
                       : "border-blush bg-bg-card text-cacao"
                   }`}
                 >
-                  {op.label}
+                  {q}
                 </button>
               );
             })}
           </div>
+          <p className="mb-2 font-sans text-[11px] text-warm-gray">
+            Quincenas de plazo
+            {fechaPago && (
+              <>
+                {" · "}
+                <span className="text-cacao-light">
+                  vence el {formatFecha(parseFechaLocal(fechaPago) ?? new Date())}
+                </span>
+              </>
+            )}
+          </p>
           <input
             type="date"
             value={fechaPago}

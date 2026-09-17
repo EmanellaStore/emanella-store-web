@@ -3,7 +3,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft, ShoppingBag, HandCoins } from "lucide-react";
 import { getFichaCliente } from "@/services/cartera.service";
-import { formatMoney, formatFecha, estaVencida, diasDeAtraso } from "@/lib/cartera";
+import {
+  formatMoney,
+  formatFecha,
+  estaVencida,
+  diasDeAtraso,
+  fechaLimiteCuenta,
+} from "@/lib/cartera";
 import AccionesCliente from "@/components/cartera/AccionesCliente";
 import BotonEliminarMovimiento from "@/components/cartera/BotonEliminarMovimiento";
 import BotonDevolverProducto from "@/components/cartera/BotonDevolverProducto";
@@ -19,9 +25,12 @@ export default async function FichaClientePage({ params }: Props) {
   if (!cliente) notFound();
 
   const ventas = cliente.ventas.filter((v) => !v.anulada);
-  const proximoPago = ventas
-    .filter((v) => v.tipo === "CREDITO" && v.fechaPago)
-    .sort((a, b) => a.fechaPago!.getTime() - b.fechaPago!.getTime())[0]?.fechaPago ?? null;
+  // Manda el compromiso más reciente: la última fecha pactada, o el plazo que
+  // dio el último abono. Misma regla que la lista (vive en lib/cartera).
+  const proximoPago = fechaLimiteCuenta(
+    ventas.filter((v) => v.tipo === "CREDITO").map((v) => v.fechaPago),
+    cliente.abonos[0]?.fecha ?? null
+  );
   const vencido = estaVencida(proximoPago, cliente.saldo);
 
   // Línea de tiempo: ventas y abonos mezclados, lo más reciente arriba
