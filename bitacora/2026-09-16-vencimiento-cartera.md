@@ -62,3 +62,44 @@ alguien podía abonar $5.000 de una deuda de $300.000 y no volver a salir nunca.
 
 `/api/auth/*` empezó a devolver 404 con los archivos intactos: caché de Turbopack
 corrupta en `.next`. Se resolvió borrando `.next`. No tiene que ver con el cambio.
+
+---
+
+## Ajuste (mismo día) — el plazo de un abono debe ser una quincena completa
+
+Steven: Marcela abonó el **10 de septiembre** y aun así salía vencida.
+
+**El defecto:** el plazo se calculaba con `siguienteCorte(fechaAbono)`, que
+devuelve el corte *siguiente a esa fecha*. Abonar el 10 de septiembre daba plazo
+solo hasta el 15 — cinco días. Peor: el plazo dependía del día en que cayera el
+abono (abonar el 1 daba 14 días; abonar el 14, uno solo). Arbitrario.
+
+**El fix:** `plazoPorAbono(fecha)` = fin de la quincena **siguiente a aquella en
+que se abonó** (`siguienteCorte(finDeQuincena(fecha))`). Se cuenta desde el
+cierre de la quincena del abono, no desde el día exacto, así siempre se da un
+período completo.
+
+| Abona | Antes | Ahora |
+| --- | --- | --- |
+| 1-sep | 15-sep (14 d) | 30-sep (29 d) |
+| 10-sep | 15-sep (5 d) | 30-sep (20 d) |
+| 14-sep | 15-sep (1 d) | 30-sep (16 d) |
+| 16-sep | 30-sep (14 d) | 15-oct (29 d) |
+
+Ahora el plazo siempre queda entre 15 y 29 días, nunca uno.
+
+**Las ventas no se tocaron.** `fechaPagoSugerida` sigue contando los próximos N
+cortes desde el día de la venta, y eso está bien: "2 quincenas" significa los dos
+próximos pagos de nómina. Si se vende el 14, el cliente cobra el 15 y puede pagar
+ahí. El abono es otra cosa — es un respiro, y un respiro de un día no es respiro.
+
+### Verificación
+
+- Probado el plazo para 10 días distintos del mes + febrero, 31 de enero y cambio
+  de año (20-dic-2026 → 15-ene-2027).
+- Marcela (venta 30-jul, abono 10-sep): pasa de "Venció hace 1 día" a **"Paga el
+  30 de sept de 2026"**, sin rojo. Las dos Marcelas de la cartera quedaron bien.
+- Si no vuelve a abonar, el 1-oct reaparece en rojo. Verificado.
+- Control de que no se limpió de más: de 17 personas queda **1 vencida**, Juan
+  José londoño — abonó el 21 de agosto, su quincena siguiente cerró el 15 de
+  sept y no ha vuelto a pagar. Mora real, bien marcada.

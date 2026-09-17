@@ -50,6 +50,33 @@ export function fechaPagoSugerida(desde: Date = new Date(), quincenas = 2): Date
 }
 
 /**
+ * Fin de la quincena en la que cae una fecha: el 15 o el último día del mes.
+ * A diferencia de `siguienteCorte`, si la fecha YA es un corte devuelve esa
+ * misma (no salta a la siguiente).
+ */
+function finDeQuincena(desde: Date): Date {
+  const y = desde.getFullYear();
+  const m = desde.getMonth();
+  const dia = desde.getDate();
+  const ultimoDia = new Date(y, m + 1, 0).getDate();
+  return new Date(y, m, dia <= 15 ? 15 : ultimoDia, 12, 0, 0, 0);
+}
+
+/**
+ * Plazo que compra un abono: el fin de la quincena **siguiente** a aquella en
+ * que se abonó.
+ *
+ * No es `siguienteCorte(fecha)`: eso hacía que el plazo dependiera del día en
+ * que cayera el abono — abonar el 1 daba 14 días y abonar el 14 daba uno solo.
+ * Marcela abonó el 10 de septiembre y quedaba cubierta solo hasta el 15.
+ * Contando desde el cierre de su quincena, siempre se da un período completo
+ * (entre 15 y 30 días), sin importar el día.
+ */
+export function plazoPorAbono(fecha: Date | string): Date {
+  return siguienteCorte(finDeQuincena(new Date(fecha)));
+}
+
+/**
  * Fecha límite de una cuenta: **el compromiso más reciente**, no el más viejo.
  *
  * Esto es el corazón del cálculo de vencimiento y por eso vive en un solo lugar
@@ -57,9 +84,10 @@ export function fechaPagoSugerida(desde: Date = new Date(), quincenas = 2): Date
  *
  * - **Una venta nueva a crédito**: se pacta una fecha nueva y esa manda, así
  *   haya quedado algo viejo sin pagar.
- * - **Un abono**: da plazo hasta el siguiente corte de quincena. Premia a quien
- *   está abonando sin perder de vista a quien se queda callado: si no vuelve a
- *   abonar, al pasar ese corte reaparece en rojo.
+ * - **Un abono**: da plazo hasta el fin de la quincena siguiente a la del abono
+ *   (ver `plazoPorAbono`). Premia a quien está abonando sin perder de vista a
+ *   quien se queda callado: si no vuelve a abonar, al pasar ese corte reaparece
+ *   en rojo.
  *
  * Devuelve null si no hay ningún compromiso (p. ej. solo ventas de contado).
  */
@@ -75,7 +103,7 @@ export function fechaLimiteCuenta(
   for (const f of fechasPago) {
     if (f) considerar(new Date(f));
   }
-  if (ultimoAbono) considerar(siguienteCorte(new Date(ultimoAbono)));
+  if (ultimoAbono) considerar(plazoPorAbono(ultimoAbono));
 
   return limite;
 }
