@@ -5,7 +5,14 @@
 import db from "@/lib/db";
 import { getInventario } from "./inventario.service";
 import { normalizar, type InventarioItem } from "@/lib/inventario";
-import { fechaLimiteCuenta, estaVencida } from "@/lib/cartera";
+import {
+  fechaLimiteCuenta,
+  estaVencida,
+  aInputDate,
+  formatHora,
+  formatDiaLargo,
+  formatMes,
+} from "@/lib/cartera";
 
 export interface ItemVentaInput {
   productId?: string | null;
@@ -435,4 +442,164 @@ export async function buscarProductosCatalogo(q: string) {
     stock: it.stock,
     borrador: false,
   }));
+}
+
+/** Un perfume vendido, para el historial (una fila por ítem de venta). */
+export interface VendidoHistorial {
+  id: string;
+  ventaId: string;
+  descripcion: string;
+  cantidad: number;
+  total: number; // precio × cantidad
+  fecha: string; // ISO: momento de la venta
+  // Ya formateadas en el servidor (hora Colombia). El navegador no formatea
+  // fechas: Node y el navegador escriben "p. m." con espacios distintos y React
+  // marca el texto como distinto al hidratar.
+  /** "7:35 p. m.", o null si la fecha se puso a mano y no hay hora real. */
+  hora: string | null;
+  /** "2026-09-28" (agrupar por día) y "lunes, 28 de septiembre de 2026". */
+  diaClave: string;
+  diaLargo: string;
+  /** "2026-09" (filtrar por mes) y "septiembre de 2026". */
+  mesClave: string;
+  mesLargo: string;
+  tipo: "CREDITO" | "CONTADO";
+  anulada: boolean;
+  clienteId: string;
+  clienteNombre: string;
+  /** Lo que falta por cobrar de este perfume (0 si ya está pagado o anulado). */
+  pendiente: number;
+}
+
+/**
+ * Cuánto falta por cobrar de cada producto vendido, por persona:
+ *
+ * 1. El abono ligado a una venta (el automático de las de contado) paga esa venta.
+ * 2. El resto de abonos paga las compras más viejas primero.
+ * 3. Dentro de una venta, lo pagado cubre sus productos en orden.
+ *
+ * Así "por cobrar" se puede sumar sobre cualquier filtro (un mes, un perfume, una
+ * persona) y, sin filtro, da exactamente lo que deben todas las personas.
+ */
+function pendientesPorItem(
+  ventas: {
+    id: string;
+    clienteId: string;
+    fecha: Date;
+    createdAt: Date;
+    anulada: boolean;
+    items: { id: string; precio: unknown; cantidad: number }[];
+  }[],
+  abonos: { clienteId: string; ventaId: string | null; monto: unknown }[]
+): Map<string, number> {
+  const pendienteVenta = new Map<string, number>();
+  for (const v of ventas) {
+    if (v.anulada) continue;
+    pendienteVenta.set(
+      v.id,
+      v.items.reduce((s, i) => s + Math.round(Number(i.precio) * i.cantidad), 0)
+    );
+  }
+
+  // 1. Abonos ligados a su venta; lo que sobre va a la bolsa de la persona.
+  const bolsa = new Map<string, number>();
+  for (const a of abonos) {
+    let monto = Math.round(Number(a.monto));
+    if (a.ventaId && pendienteVenta.has(a.ventaId)) {
+      const aplica = Math.min(monto, pendienteVenta.get(a.ventaId)!);
+      pendienteVenta.set(a.ventaId, pendienteVenta.get(a.ventaId)! - aplica);
+      monto -= aplica;
+    }
+    bolsa.set(a.clienteId, (bolsa.get(a.clienteId) ?? 0) + monto);
+  }
+
+  // 2. La bolsa paga las compras más viejas primero.
+  const ordenadas = ventas
+    .filter((v) => !v.anulada)
+    .sort(
+      (a, b) =>
+        a.fecha.getTime() - b.fecha.getTime() ||
+        a.createdAt.getTime() - b.createdAt.getTime()
+    );
+  for (const v of ordenadas) {
+    const disponible = bolsa.get(v.clienteId) ?? 0;
+    if (disponible <= 0) continue;
+    const aplica = Math.min(disponible, pendienteVenta.get(v.id)!);
+    pendienteVenta.set(v.id, pendienteVenta.get(v.id)! - aplica);
+    bolsa.set(v.clienteId, disponible - aplica);
+  }
+
+  // 3. Lo pagado de cada venta cubre sus productos en orden; el resto queda pendiente.
+  const porItem = new Map<string, number>();
+  for (const v of ventas) {
+    const items = [...v.items].sort((a, b) => a.id.localeCompare(b.id));
+    if (v.anulada) {
+      for (const i of items) porItem.set(i.id, 0);
+      continue;
+    }
+    const totalVenta = items.reduce((s, i) => s + Math.round(Number(i.precio) * i.cantidad), 0);
+    let pagado = totalVenta - pendienteVenta.get(v.id)!;
+    for (const i of items) {
+      const t = Math.round(Number(i.precio) * i.cantidad);
+      const cubre = Math.min(pagado, t);
+      porItem.set(i.id, t - cubre);
+      pagado -= cubre;
+    }
+  }
+  return porItem;
+}
+
+/**
+ * Historial de perfumes vendidos, del más reciente al más viejo. Incluye las
+ * ventas anuladas (marcadas) para no perder la trazabilidad; las eliminadas ya
+ * no existen.
+ */
+export async function getHistorialVendidos(): Promise<VendidoHistorial[]> {
+  const [ventas, abonos] = await Promise.all([
+    db.carteraVenta.findMany({
+      include: {
+        items: true,
+        cliente: { select: { id: true, nombre: true } },
+      },
+    }),
+    db.carteraAbono.findMany({
+      select: { clienteId: true, ventaId: true, monto: true },
+    }),
+  ]);
+  const pendientes = pendientesPorItem(ventas, abonos);
+
+  // Una fila por producto, del más reciente al más viejo.
+  const items = ventas
+    .flatMap((venta) =>
+      [...venta.items]
+        .sort((a, b) => a.id.localeCompare(b.id))
+        .map((item) => ({ ...item, venta }))
+    )
+    .sort((a, b) => b.venta.fecha.getTime() - a.venta.fecha.getTime());
+
+  return items.map((i) => {
+    const f = i.venta.fecha;
+    const diaClave = aInputDate(f);
+    // Si la fecha se registró al momento (hoy: siempre), la hora es real. Si
+    // algún día se carga una venta con fecha atrasada, no se inventa una hora.
+    const horaReal = Math.abs(f.getTime() - i.venta.createdAt.getTime()) < 5 * 60_000;
+    return {
+    id: i.id,
+    ventaId: i.venta.id,
+    descripcion: i.descripcion,
+    cantidad: i.cantidad,
+    total: Math.round(Number(i.precio) * i.cantidad),
+    fecha: f.toISOString(),
+    hora: horaReal ? formatHora(f) : null,
+    diaClave,
+    diaLargo: formatDiaLargo(f),
+    mesClave: diaClave.slice(0, 7),
+    mesLargo: formatMes(f),
+    tipo: i.venta.tipo,
+    anulada: i.venta.anulada,
+    clienteId: i.venta.cliente.id,
+    clienteNombre: i.venta.cliente.nombre,
+    pendiente: pendientes.get(i.id) ?? 0,
+    };
+  });
 }

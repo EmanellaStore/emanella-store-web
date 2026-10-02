@@ -241,3 +241,32 @@ export function cicloActual<V extends VentaCiclo, A extends AbonoCiclo>(
     saldo: saldoFinal,
   };
 }
+
+/** Hora en Colombia: "7:35 p. m.". */
+export function formatHora(fecha: Date | string): string {
+  return new Date(fecha).toLocaleTimeString("es-CO", {
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: ZONA_CO,
+  });
+}
+
+/** Encabezado de día en Colombia: "lunes, 28 de septiembre de 2026". */
+export function formatDiaLargo(fecha: Date | string): string {
+  return new Date(fecha).toLocaleDateString("es-CO", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: ZONA_CO,
+  });
+}
+
+/** Mes en Colombia: "septiembre de 2026". */
+export function formatMes(fecha: Date | string): string {
+  return new Date(fecha).toLocaleDateString("es-CO", {
+    month: "long",
+    year: "numeric",
+    timeZone: ZONA_CO,
+  });
+}

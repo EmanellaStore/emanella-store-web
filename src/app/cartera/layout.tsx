@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import BotonSalir from "@/components/cartera/BotonSalir";
+import NavCartera from "@/components/cartera/NavCartera";
 
 export const metadata: Metadata = {
   title: "Cartera Emanella",
@@ -44,12 +45,7 @@ export default function CarteraLayout({ children }: { children: React.ReactNode 
             </span>
           </Link>
           <div className="flex items-center gap-4">
-            <Link
-              href="/inventario"
-              className="font-sans text-[11px] uppercase tracking-[0.2em] text-on-dark/60 active:text-gold"
-            >
-              Inventario
-            </Link>
+            <NavCartera />
             <BotonSalir />
           </div>
         </div>
