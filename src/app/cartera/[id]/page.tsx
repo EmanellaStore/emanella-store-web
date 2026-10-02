@@ -9,6 +9,7 @@ import {
   estaVencida,
   diasDeAtraso,
   fechaLimiteCuenta,
+  cicloActual,
 } from "@/lib/cartera";
 import AccionesCliente from "@/components/cartera/AccionesCliente";
 import BotonEliminarMovimiento from "@/components/cartera/BotonEliminarMovimiento";
@@ -32,6 +33,10 @@ export default async function FichaClientePage({ params }: Props) {
     cliente.abonos[0]?.fecha ?? null
   );
   const vencido = estaVencida(proximoPago, cliente.saldo);
+
+  // Solo lo vigente: desde la última vez que quedó en $0. Lo ya pagado no se
+  // vuelve a sumar en el resumen ni se le manda al cliente en el estado de cuenta.
+  const ciclo = cicloActual(cliente.ventas, cliente.abonos);
 
   // Línea de tiempo: ventas y abonos mezclados, lo más reciente arriba
   const movimientos = [
@@ -58,8 +63,7 @@ export default async function FichaClientePage({ params }: Props) {
   const lineas = [
     `Hola ${cliente.nombre}, este es tu estado de cuenta con Emanella:`,
     "",
-    ...ventas
-      .filter((v) => v.tipo === "CREDITO")
+    ...ciclo.ventas
       .map(
         (v) =>
           `• ${formatFecha(v.fecha)} — ${v.items
@@ -71,9 +75,7 @@ export default async function FichaClientePage({ params }: Props) {
             )
             .join(", ")}`
       ),
-    ...(cliente.abonos.length
-      ? ["", `Abonos: ${formatMoney(cliente.totalAbonos)}`]
-      : []),
+    ...(ciclo.abonado > 0 ? ["", `Abonos: ${formatMoney(ciclo.abonado)}`] : []),
     "",
     cliente.saldo > 0
       ? `Saldo pendiente: ${formatMoney(cliente.saldo)}`
@@ -116,8 +118,8 @@ export default async function FichaClientePage({ params }: Props) {
         </p>
         {cliente.saldo > 0 && (
           <p className="mt-2 font-sans text-xs text-on-dark/70">
-            Fiado {formatMoney(cliente.totalVentas)} · Abonado{" "}
-            {formatMoney(cliente.totalAbonos)}
+            Fiado {formatMoney(ciclo.fiado)}
+            {ciclo.abonado > 0 && <> · Abonado {formatMoney(ciclo.abonado)}</>}
             {proximoPago && (
               <>
                 {" · "}

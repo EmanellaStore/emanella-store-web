@@ -10,6 +10,7 @@ import {
   formatFecha,
   fechaPagoSugerida,
   parseFechaLocal,
+  aInputDate,
   QUINCENAS,
   METODOS_PAGO,
 } from "@/lib/cartera";
@@ -39,11 +40,6 @@ interface ItemVenta {
   precioTexto: string;
 }
 
-function aInputDate(d: Date) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
-    d.getDate()
-  ).padStart(2, "0")}`;
-}
 
 export default function NuevaVentaForm({
   clienteInicial = null,

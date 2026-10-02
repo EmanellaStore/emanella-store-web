@@ -5,7 +5,7 @@
 import db from "@/lib/db";
 import { getInventario } from "./inventario.service";
 import { normalizar, type InventarioItem } from "@/lib/inventario";
-import { fechaLimiteCuenta } from "@/lib/cartera";
+import { fechaLimiteCuenta, estaVencida } from "@/lib/cartera";
 
 export interface ItemVentaInput {
   productId?: string | null;
@@ -107,9 +107,6 @@ export async function getClientesConSaldo(opciones?: {
     ultimosAbonos.map((a) => [a.clienteId, a._max.fecha])
   );
 
-  const hoy = new Date();
-  hoy.setHours(0, 0, 0, 0);
-
   return clientes
     .map((c) => {
       const totalVentas = ventasPorCliente.get(c.id) ?? 0;
@@ -127,7 +124,7 @@ export async function getClientesConSaldo(opciones?: {
         totalAbonos,
         saldo,
         proximoVencimiento,
-        vencido: saldo > 0 && !!proximoVencimiento && proximoVencimiento < hoy,
+        vencido: estaVencida(proximoVencimiento, saldo),
       };
     })
     .filter((c) => (opciones?.incluirSaldados ? true : c.saldo > 0))

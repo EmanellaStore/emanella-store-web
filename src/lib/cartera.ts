@@ -22,19 +22,54 @@ export function formatMoney(n: number | string): string {
 /** Plazos que se pueden pactar, en quincenas. */
 export const QUINCENAS = [1, 2, 3, 4, 5, 6] as const;
 
+// ── Hora Colombia ────────────────────────────────────────────────────────────
+// Todo el cálculo de días se hace sobre el calendario de Colombia, sin importar
+// dónde corra el código. Vercel corre en UTC (5 h adelante): antes, lo que se
+// registraba después de las 7 p. m. salía con fecha del día siguiente y "hoy"
+// cambiaba a las 7 p. m. Colombia no tiene horario de verano: UTC−5 fijo todo el
+// año, así que basta con un desfase constante.
+export const ZONA_CO = "America/Bogota";
+const DESFASE_CO = 5 * 3_600_000;
+const DIA = 86_400_000;
+
+/** Año, mes (0-11) y día de un instante, en calendario de Colombia. */
+function partesCO(f: Date): { y: number; m: number; d: number } {
+  const c = new Date(f.getTime() - DESFASE_CO);
+  return { y: c.getUTCFullYear(), m: c.getUTCMonth(), d: c.getUTCDate() };
+}
+
 /**
- * Corte de quincena: día 15 y último día del mes. Se devuelve al mediodía a
- * propósito: una fecha a medianoche, guardada en un servidor en UTC, se lee en
- * Colombia (−5) como el día anterior. El mediodía deja el día calendario
- * intacto en ambos husos.
+ * Mediodía en Colombia de un día calendario. Se guarda al mediodía a propósito:
+ * queda en el mismo día calendario se lea desde donde se lea. Acepta meses y
+ * días desbordados (mes 12 → enero del año siguiente; día 0 → último del mes
+ * anterior), como `Date.UTC`.
  */
+function mediodiaCO(y: number, m: number, d: number): Date {
+  return new Date(Date.UTC(y, m, d, 17)); // 12:00 en Colombia = 17:00 UTC
+}
+
+/** Número de día en calendario de Colombia (para comparar días, no horas). */
+function diaCO(f: Date | string): number {
+  return Math.floor((new Date(f).getTime() - DESFASE_CO) / DIA);
+}
+
+function ultimoDiaDelMes(y: number, m: number): number {
+  return new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+}
+
+/** "2026-09-28" del día calendario de Colombia (para los `<input type="date">`). */
+export function aInputDate(f: Date): string {
+  const { y, m, d } = partesCO(f);
+  return `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+}
+
+/** Corte de quincena siguiente a una fecha: el 15 o el último día del mes. */
 export function siguienteCorte(desde: Date): Date {
-  const d = new Date(desde.getFullYear(), desde.getMonth(), desde.getDate());
-  const ultimoDia = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-  const al = (y: number, m: number, dia: number) => new Date(y, m, dia, 12, 0, 0, 0);
-  if (d.getDate() < 15) return al(d.getFullYear(), d.getMonth(), 15);
-  if (d.getDate() < ultimoDia) return al(d.getFullYear(), d.getMonth(), ultimoDia);
-  return al(d.getFullYear(), d.getMonth() + 1, 15);
+  const { y, m, d } = partesCO(desde);
+  const ultimo = ultimoDiaDelMes(y, m);
+  if (d < 15) return mediodiaCO(y, m, 15);
+  if (d < ultimo) return mediodiaCO(y, m, ultimo);
+  return mediodiaCO(y, m + 1, 15);
 }
 
 /**
@@ -55,11 +90,8 @@ export function fechaPagoSugerida(desde: Date = new Date(), quincenas = 2): Date
  * misma (no salta a la siguiente).
  */
 function finDeQuincena(desde: Date): Date {
-  const y = desde.getFullYear();
-  const m = desde.getMonth();
-  const dia = desde.getDate();
-  const ultimoDia = new Date(y, m + 1, 0).getDate();
-  return new Date(y, m, dia <= 15 ? 15 : ultimoDia, 12, 0, 0, 0);
+  const { y, m, d } = partesCO(desde);
+  return mediodiaCO(y, m, d <= 15 ? 15 : ultimoDiaDelMes(y, m));
 }
 
 /**
@@ -109,40 +141,103 @@ export function fechaLimiteCuenta(
 }
 
 /**
- * Convierte "2026-08-15" (input date) en una fecha local. Con `new Date(str)`
- * el navegador la interpreta como UTC y en Colombia (-5) se corre un día atrás.
+ * Convierte "2026-08-15" (input date) en el mediodía de ese día en Colombia.
+ * Con `new Date(str)` se interpreta como medianoche UTC, que en Colombia es el
+ * día anterior.
  */
 export function parseFechaLocal(valor: string | Date | null | undefined): Date | null {
   if (!valor) return null;
   if (valor instanceof Date) return valor;
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(valor.trim());
-  if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12, 0, 0);
+  if (m) return mediodiaCO(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
   const d = new Date(valor);
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
+/** Fecha legible, siempre en calendario de Colombia ("28 de sept de 2026"). */
 export function formatFecha(fecha: Date | string): string {
   return new Date(fecha).toLocaleDateString("es-CO", {
     day: "numeric",
     month: "short",
     year: "numeric",
+    timeZone: ZONA_CO,
   });
 }
 
+/** Vencida = su día de pago ya pasó en Colombia (el mismo día aún no vence). */
 export function estaVencida(fechaPago: Date | string | null, saldo: number): boolean {
   if (!fechaPago || saldo <= 0) return false;
-  const hoy = new Date();
-  hoy.setHours(0, 0, 0, 0);
-  return new Date(fechaPago) < hoy;
+  return diaCO(fechaPago) < diaCO(new Date());
 }
 
 export function diasDeAtraso(fechaPago: Date | string | null): number {
   if (!fechaPago) return 0;
-  const hoy = new Date();
-  hoy.setHours(0, 0, 0, 0);
-  const f = new Date(fechaPago);
-  f.setHours(0, 0, 0, 0);
-  return Math.max(0, Math.round((hoy.getTime() - f.getTime()) / 86_400_000));
+  return Math.max(0, diaCO(new Date()) - diaCO(fechaPago));
 }
 
 export const METODOS_PAGO = ["Efectivo", "Nequi", "Daviplata", "Transferencia", "Otro"] as const;
+
+interface VentaCiclo {
+  fecha: Date;
+  total: number | string | { toString(): string };
+  tipo: string;
+  anulada?: boolean;
+}
+interface AbonoCiclo {
+  fecha: Date;
+  monto: number | string | { toString(): string };
+}
+
+/**
+ * Ciclo actual de una cuenta: lo que pasó desde la última vez que la persona
+ * quedó en $0. Lo que ya pagó por completo antes no aparece en el resumen ni en
+ * el estado de cuenta (antes se sumaba todo el historial: "Fiado $570.000" cuando
+ * lo vigente eran $420.000).
+ *
+ * - `ventas`: las ventas a crédito del ciclo (las de contado se pagan solas).
+ * - `fiado`: suma de esas ventas.
+ * - `abonado`: fiado − saldo. Derivado a propósito: así `fiado − abonado` siempre
+ *   cuadra con lo que debe, aunque haya quedado un saldo a favor de antes.
+ */
+export function cicloActual<V extends VentaCiclo, A extends AbonoCiclo>(
+  ventas: V[],
+  abonos: A[]
+): { ventas: V[]; fiado: number; abonado: number; saldo: number } {
+  type Ev = { fecha: number; orden: number; monto: number; venta?: V };
+  const eventos: Ev[] = [
+    ...ventas
+      .filter((v) => !v.anulada)
+      .map((v) => ({
+        fecha: new Date(v.fecha).getTime(),
+        orden: 0, // el mismo día, primero la venta y luego el abono
+        monto: Number(v.total),
+        venta: v,
+      })),
+    ...abonos.map((a) => ({
+      fecha: new Date(a.fecha).getTime(),
+      orden: 1,
+      monto: -Number(a.monto),
+    })),
+  ].sort((a, b) => a.fecha - b.fecha || a.orden - b.orden);
+
+  // Corte: justo después del último momento en que el saldo quedó en ≤ 0.
+  let saldo = 0;
+  let corte = 0;
+  eventos.forEach((e, i) => {
+    saldo += e.monto;
+    if (Math.round(saldo) <= 0) corte = i + 1;
+  });
+
+  const delCiclo = eventos
+    .slice(corte)
+    .flatMap((e) => (e.venta && e.venta.tipo === "CREDITO" ? [e.venta] : []));
+  const fiado = delCiclo.reduce((s, v) => s + Number(v.total), 0);
+  const saldoFinal = Math.max(0, Math.round(saldo));
+
+  return {
+    ventas: delCiclo,
+    fiado: Math.round(fiado),
+    abonado: Math.max(0, Math.round(fiado) - saldoFinal),
+    saldo: saldoFinal,
+  };
+}
