@@ -117,6 +117,10 @@ export async function actualizarProducto(
   if (!Number.isInteger(fila) || fila < 2) {
     throw new Error("Fila inválida");
   }
+  // Se lee la fila antes de escribir para saber si el stock cruza el 0 y hay que
+  // repintar la casilla de Stock Disponible (verde ↔ naranja).
+  const { items } = await getInventario();
+  const antes = items.find((i) => i.fila === fila);
   const { cols } = await getLayout();
 
   const celdas: { rango: string; valor: string | number }[] = [];
@@ -163,6 +167,23 @@ export async function actualizarProducto(
 
   if (celdas.length === 0) throw new Error("Nada que actualizar");
   await escribirCeldas(celdas);
+
+  // Si el stock pasó de 0 a tener unidades (o al revés), el color de la casilla
+  // de Stock Disponible tiene que seguirlo. marcarEstados reescribe el estado
+  // (el mismo que quedó guardado) y pinta según el stock ya recalculado.
+  if (antes) {
+    const despues = calcularStock({
+      ...antes,
+      stockInicial: patch.stockInicial ?? antes.stockInicial,
+      ventaDetal: patch.ventaDetal ?? antes.ventaDetal,
+    });
+    if (antes.stock <= 0 !== despues <= 0) {
+      await marcarEstados(
+        [{ fila, estado: patch.estado?.trim() || antes.estado }],
+        cols.estado
+      );
+    }
+  }
 }
 
 export interface NuevoProducto {
@@ -328,13 +349,21 @@ async function ajustarVentaDetal(
   for (const { item, ventaDetal } of nuevos) {
     const stock = calcularStock({ ...item, ventaDetal });
     const actual = normalizar(item.estado);
-    if (stock <= 0 && actual !== normalizar(ESTADO_AGOTADO)) {
-      if (actual === normalizar(ESTADO_NO_DISPONIBLE)) continue;
+    const cruzaCero = item.stock <= 0 !== stock <= 0;
+    if (
+      stock <= 0 &&
+      actual !== normalizar(ESTADO_AGOTADO) &&
+      actual !== normalizar(ESTADO_NO_DISPONIBLE)
+    ) {
       aMarcar.push({ fila: item.fila, estado: ESTADO_AGOTADO });
       agotados.push(item.fila);
     } else if (stock > 0 && actual === normalizar(ESTADO_AGOTADO)) {
       aMarcar.push({ fila: item.fila, estado: ESTADO_EN_STOCK });
       repuestos.push(item.fila);
+    } else if (cruzaCero) {
+      // El estado no cambia, pero el color de Stock Disponible sí debe seguir
+      // al stock (verde ↔ naranja). Se reescribe el mismo estado para repintar.
+      aMarcar.push({ fila: item.fila, estado: item.estado });
     }
   }
   await marcarEstados(aMarcar, cols.estado);

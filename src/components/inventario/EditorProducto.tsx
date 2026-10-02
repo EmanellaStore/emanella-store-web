@@ -8,6 +8,7 @@ import { X, Minus, Plus, ShoppingCart, PackagePlus } from "lucide-react";
 import {
   ESTADOS,
   ESTADO_AGOTADO,
+  ESTADO_EN_STOCK,
   formatMoney,
   parseNumero,
   calcularStock,
@@ -61,6 +62,20 @@ export default function EditorProducto({ item, onCerrar, onGuardado }: Props) {
       regalos: item.regalos,
     });
     if (restante <= 0 && estado !== ESTADO_AGOTADO) setEstado(ESTADO_AGOTADO);
+  };
+
+  // Reabastecer: si el producto estaba agotado y vuelve a tener unidades, se
+  // preselecciona "En stock" (editable antes de guardar). Inverso de registrarVenta.
+  const cambiarStockInicial = (nuevo: number) => {
+    const valor = Math.max(0, nuevo);
+    setStockInicial(valor);
+    const restante = calcularStock({
+      stockInicial: valor,
+      ventaDetal,
+      ventaMayorista: item.ventaMayorista,
+      regalos: item.regalos,
+    });
+    if (restante > 0 && estado === ESTADO_AGOTADO) setEstado(ESTADO_EN_STOCK);
   };
 
   const guardar = async () => {
@@ -180,7 +195,7 @@ export default function EditorProducto({ item, onCerrar, onGuardado }: Props) {
         <div className="flex items-stretch">
           <button
             type="button"
-            onClick={() => setStockInicial((v) => Math.max(0, v - 1))}
+            onClick={() => cambiarStockInicial(stockInicial - 1)}
             aria-label="Restar una entrada"
             className="flex w-12 items-center justify-center border border-blush bg-bg-card text-cacao active:bg-beige"
           >
@@ -191,12 +206,12 @@ export default function EditorProducto({ item, onCerrar, onGuardado }: Props) {
             inputMode="numeric"
             min={0}
             value={stockInicial}
-            onChange={(e) => setStockInicial(Math.max(0, Math.round(Number(e.target.value) || 0)))}
+            onChange={(e) => cambiarStockInicial(Math.round(Number(e.target.value) || 0))}
             className="w-full border-y border-blush bg-bg-card px-3 py-3 text-center font-serif text-xl text-cacao outline-none focus:border-gold"
           />
           <button
             type="button"
-            onClick={() => setStockInicial((v) => v + 1)}
+            onClick={() => cambiarStockInicial(stockInicial + 1)}
             aria-label="Sumar una entrada"
             className="flex w-12 items-center justify-center border border-blush bg-bg-card text-cacao active:bg-beige"
           >

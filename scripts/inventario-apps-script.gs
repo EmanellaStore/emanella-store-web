@@ -7,7 +7,8 @@
  * dueña de la hoja. Se protege con un secreto compartido.
  *
  * Acciones: read (leer tabla), write (escribir celdas), append (agregar producto
- * nuevo copiando las fórmulas de la fila de arriba).
+ * nuevo copiando las fórmulas de la fila de arriba), estado (escribir estado y
+ * pintar Estado + Stock Disponible) y colores (diagnóstico, solo lectura).
  *
  * Pasos y re-despliegue: ver docs/07-inventario-conexion-google.md
  *
@@ -45,6 +46,10 @@ function doPost(e) {
 
     if (body.action === "estado") {
       return json(marcarEstados(hoja, body.updates || []));
+    }
+
+    if (body.action === "colores") {
+      return json(leerColores(hoja));
     }
 
     return json({ ok: false, error: "accion desconocida" });
@@ -113,58 +118,161 @@ function agregarProducto(hoja, valores) {
 }
 
 /**
- * Escribe el Estado de una o varias filas y copia el color de fondo (y de letra)
- * de otra fila que YA tenga ese mismo estado. Así "Se debe volver a comprar"
- * queda naranja igual que las demás agotadas, sin tener que hardcodear el color:
- * el Excel manda. Si no hay ninguna fila de referencia, solo escribe el texto.
+ * Ubica la tabla principal: fila de encabezados, columnas y la última fila de
+ * producto. Devuelve null si no la encuentra.
+ */
+function ubicarTabla(hoja) {
+  var matriz = hoja.getDataRange().getValues();
+  for (var i = 0; i < matriz.length; i++) {
+    var col = mapearColumnas(matriz[i]);
+    if (!col) continue;
+    var ultima = i; // índice 0-based del último producto
+    for (var r = i + 1; r < matriz.length; r++) {
+      if (!String(matriz[r][col.nombre] || "").trim()) break;
+      ultima = r;
+    }
+    return { matriz: matriz, col: col, header: i, primera: i + 2, ultima: ultima + 1 };
+  }
+  return null;
+}
+
+/** El valor que más se repite (null si la lista está vacía). */
+function moda(valores) {
+  var cuenta = {};
+  var mejor = null;
+  for (var i = 0; i < valores.length; i++) {
+    var v = valores[i];
+    cuenta[v] = (cuenta[v] || 0) + 1;
+    if (mejor === null || cuenta[v] > cuenta[mejor]) mejor = v;
+  }
+  return mejor;
+}
+
+/**
+ * Escribe el Estado de una o varias filas y pinta las casillas de **Estado y
+ * Stock Disponible** igual que las demás filas en la misma situación.
+ *
+ * El color no está escrito en el código: se toma el que MÁS se repite en el
+ * Excel (ver refStock / refEstado abajo). Una fila mal pintada no arrastra a las
+ * demás porque manda la mayoría. Sin referencias, solo se escribe el texto.
  */
 function marcarEstados(hoja, updates) {
-  var matriz = hoja.getDataRange().getValues();
+  var t = ubicarTabla(hoja);
+  if (!t) return { ok: false, error: "no se encontro la tabla" };
+  var col = t.col;
+  var n = t.ultima - t.primera + 1;
+  if (n <= 0) return { ok: true, escritas: 0, pintadas: 0 };
 
-  var headerRow = -1;
-  var col = null;
-  for (var i = 0; i < matriz.length; i++) {
-    var mapa = mapearColumnas(matriz[i]);
-    if (mapa) { headerRow = i; col = mapa; break; }
-  }
-  if (headerRow < 0) return { ok: false, error: "no se encontro la tabla" };
+  var rEstado = hoja.getRange(t.primera, col.estado + 1, n, 1);
+  var fondoEstado = rEstado.getBackgrounds();
+  var letraEstado = rEstado.getFontColors();
+  var rStock = col.stock != null ? hoja.getRange(t.primera, col.stock + 1, n, 1) : null;
+  var fondoStock = rStock ? rStock.getBackgrounds() : null;
+  var letraStock = rStock ? rStock.getFontColors() : null;
 
-  var colEstado = col.estado + 1; // 1-based
-  var objetivo = {};              // filas que vamos a tocar: no sirven de referencia
-  for (var u = 0; u < updates.length; u++) objetivo[Number(updates[u].fila)] = true;
-
-  // Primera fila de la tabla (que no toquemos) cuyo estado coincide.
-  function referencia(estado) {
-    var buscado = norm(estado);
-    for (var r = headerRow + 1; r < matriz.length; r++) {
-      if (!String(matriz[r][col.nombre] || "").trim()) break;
-      if (objetivo[r + 1]) continue;
-      if (norm(matriz[r][col.estado]) === buscado) return r + 1;
+  // Solo se excluyen de la referencia las filas que CAMBIAN de estado (su color
+  // actual es el del estado viejo). Las que ya tienen ese estado y solo se
+  // repintan siguen contando: si no, al repintar todas las agotadas no quedaría
+  // ninguna de referencia.
+  var objetivo = {};
+  for (var u = 0; u < updates.length; u++) {
+    var fu = Number(updates[u].fila);
+    if (fu >= t.primera && fu <= t.ultima &&
+        norm(t.matriz[fu - 1][col.estado]) !== norm(updates[u].estado)) {
+      objetivo[fu] = true;
     }
-    return -1;
   }
 
-  var pintadas = 0;
-  var escritas = 0;
+  var tocadas = {};
+  for (var w = 0; w < updates.length; w++) tocadas[Number(updates[w].fila)] = true;
+
+  function stockDe(fila) {
+    if (col.stock == null) return null;
+    var v = Number(String(t.matriz[fila - 1][col.stock]).replace(/[^0-9.-]/g, ""));
+    return isNaN(v) ? null : v;
+  }
+
+  // Colores de referencia, calculados una sola vez:
+  // - Casilla de STOCK DISPONIBLE: depende del stock, no del estado. En el Excel
+  //   real (2026-10-02) las filas con unidades están en verde y las que están en
+  //   0 en naranja, sea cual sea su estado. Se toma el más repetido entre TODAS
+  //   las filas en la misma condición (en 0 / con unidades), sin las que se están
+  //   tocando.
+  // - Casilla de ESTADO: el más repetido entre las filas con ese mismo estado.
+  var cacheStock = {}, cacheEstado = {};
+  function refStock(enCero) {
+    if (cacheStock[enCero] !== undefined) return cacheStock[enCero];
+    var f = [], l = [];
+    for (var i = 0; i < n && fondoStock; i++) {
+      var fila = t.primera + i;
+      if (tocadas[fila]) continue;
+      var s = stockDe(fila);
+      if (s === null || (s <= 0) !== enCero) continue;
+      f.push(fondoStock[i][0]); l.push(letraStock[i][0]);
+    }
+    cacheStock[enCero] = f.length ? { fondo: moda(f), letra: moda(l) } : null;
+    return cacheStock[enCero];
+  }
+  function refEstado(estado) {
+    var clave = norm(estado);
+    if (cacheEstado[clave] !== undefined) return cacheEstado[clave];
+    var f = [], l = [];
+    for (var i = 0; i < n; i++) {
+      var fila = t.primera + i;
+      if (objetivo[fila]) continue;
+      if (norm(t.matriz[fila - 1][col.estado]) !== clave) continue;
+      f.push(fondoEstado[i][0]); l.push(letraEstado[i][0]);
+    }
+    cacheEstado[clave] = f.length ? { fondo: moda(f), letra: moda(l) } : null;
+    return cacheEstado[clave];
+  }
+
+  var escritas = 0, pintadas = 0, usados = {};
   for (var k = 0; k < updates.length; k++) {
     var fila = Number(updates[k].fila);
     var estado = String(updates[k].estado || "");
-    if (!fila || !estado) continue;
+    if (!fila || !estado || fila < t.primera || fila > t.ultima) continue;
 
-    var celda = hoja.getRange(fila, colEstado);
-    celda.setValue(estado);
+    var celdaEstado = hoja.getRange(fila, col.estado + 1);
+    celdaEstado.setValue(estado);
     escritas++;
 
-    var ref = referencia(estado);
-    if (ref > 0) {
-      var origen = hoja.getRange(ref, colEstado);
-      celda.setBackground(origen.getBackground());
-      celda.setFontColor(origen.getFontColor());
-      pintadas++;
+    var re = refEstado(estado);
+    if (re) celdaEstado.setBackground(re.fondo).setFontColor(re.letra);
+
+    var s = stockDe(fila);
+    var rs = s === null ? null : refStock(s <= 0);
+    if (rs) {
+      hoja.getRange(fila, col.stock + 1).setBackground(rs.fondo).setFontColor(rs.letra);
+      usados[s <= 0 ? "stock en 0" : "stock con unidades"] = rs.fondo;
     }
+    if (re || rs) pintadas++;
   }
 
-  return { ok: true, escritas: escritas, pintadas: pintadas };
+  return { ok: true, escritas: escritas, pintadas: pintadas, colores: usados };
+}
+
+/** Diagnóstico: estado, stock y colores de cada producto (solo lectura). */
+function leerColores(hoja) {
+  var t = ubicarTabla(hoja);
+  if (!t) return { ok: false, error: "no se encontro la tabla" };
+  var col = t.col;
+  var n = t.ultima - t.primera + 1;
+  var fe = hoja.getRange(t.primera, col.estado + 1, n, 1).getBackgrounds();
+  var fs = col.stock != null ? hoja.getRange(t.primera, col.stock + 1, n, 1).getBackgrounds() : null;
+  var filas = [];
+  for (var i = 0; i < n; i++) {
+    var f = t.primera + i;
+    filas.push({
+      fila: f,
+      nombre: String(t.matriz[f - 1][col.nombre]),
+      estado: String(t.matriz[f - 1][col.estado]),
+      stock: col.stock != null ? t.matriz[f - 1][col.stock] : null,
+      fondoStock: fs ? fs[i][0] : null,
+      fondoEstado: fe[i][0]
+    });
+  }
+  return { ok: true, filas: filas };
 }
 
 /** Mapa canónico → índice de columna (0-based). null si la fila no es el encabezado. */
@@ -174,6 +282,7 @@ function mapearColumnas(fila) {
     var h = norm(fila[i]);
     if (h === "nombre del articulo") col.nombre = i;
     else if (h === "tipo") col.tipo = i;
+    else if (h === "stock disponible") col.stock = i;
     else if (h === "stock inicial") col.stockInicial = i;
     else if (h === "venta detal") col.ventaDetal = i;
     else if (h === "precio compra") col.precioCompra = i;

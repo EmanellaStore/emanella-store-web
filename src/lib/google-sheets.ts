@@ -107,3 +107,18 @@ export async function agregarFila(
   const data = await callScript({ action: "append", valores });
   return Number(data.fila);
 }
+
+export interface ColorFila {
+  fila: number;
+  nombre: string;
+  estado: string;
+  stock: unknown;
+  fondoStock: string | null;
+  fondoEstado: string;
+}
+
+/** Diagnóstico (solo lectura): estado, stock y color de las casillas de cada fila. */
+export async function leerColores(): Promise<ColorFila[]> {
+  const data = await callScript({ action: "colores" });
+  return (data.filas as ColorFila[]) ?? [];
+}

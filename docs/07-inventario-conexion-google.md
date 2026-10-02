@@ -88,17 +88,33 @@ se comporta igual que los demás.
 
 Cuando una venta (desde la cartera o desde el inventario) deja un producto en
 **Stock Disponible 0**, la app le pone sola el estado **"Se debe volver a
-comprar"** y pinta la casilla **copiando el color de otra fila que ya tenga ese
-mismo estado** — no hay ningún color hardcodeado, el Excel manda. Esto usa la
+comprar"** y pinta la casilla de **Stock Disponible** con el color que **más se
+repite** entre todas las filas en la misma condición de stock: en 0 (naranja en el
+Excel) o con unidades (verde). La casilla de Estado toma el color más repetido
+entre las filas con ese mismo estado. No hay ningún color hardcodeado: el Excel
+manda, y una fila mal pintada no arrastra a las demás porque gana la mayoría. Esto usa la
 acción `estado` del script, así que también necesita el redespliegue.
 
-No toca los productos en *"Temporalmente no disponible"*: esos están en 0 a
-propósito, no por una venta.
+Al revés también: cuando un producto vuelve a tener unidades (una devolución en
+la cartera o subir el stock desde el inventario de la app), la casilla vuelve al
+color de "con unidades" (verde), y si estaba en "Se debe volver a comprar" el
+editor propone "En stock".
+
+No cambia el estado de los productos en *"Temporalmente no disponible"*: esos
+están así a propósito, no por una venta (su casilla de stock sí sigue el color).
 
 Para arreglar de una vez los que ya quedaron en 0 sin marcar:
 
 ```bash
-npx tsx scripts/marcar-agotados.ts
+npx tsx --env-file=.env.local scripts/marcar-agotados.ts
+```
+
+Para volver a pintar también las que ya dicen "Se debe volver a comprar" en 0 pero
+siguen con la casilla de Stock Disponible en el color de "con unidades" (verde).
+Las que tengan otro color, como un naranja puesto a mano, no se tocan:
+
+```bash
+npx tsx --env-file=.env.local scripts/marcar-agotados.ts --repintar
 ```
 
 ## Si cambias el script después
