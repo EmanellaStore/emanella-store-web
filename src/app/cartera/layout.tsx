@@ -1,9 +1,7 @@
 // src/app/cartera/layout.tsx — módulo de cartera: app aparte, pensada para celular.
 import type { Metadata, Viewport } from "next";
-import Link from "next/link";
-import Image from "next/image";
 import BotonSalir from "@/components/cartera/BotonSalir";
-import NavCartera from "@/components/cartera/NavCartera";
+import NavCartera, { MarcaCartera } from "@/components/cartera/NavCartera";
 
 export const metadata: Metadata = {
   title: "Cartera Emanella",
@@ -32,18 +30,7 @@ export default function CarteraLayout({ children }: { children: React.ReactNode 
     <div className="min-h-screen bg-cream flex flex-col">
       <header className="sticky top-0 z-40 bg-warm-black text-on-dark">
         <div className="mx-auto flex h-14 max-w-2xl items-center justify-between px-4">
-          <Link href="/cartera" className="flex items-center gap-2.5">
-            <Image
-              src="/cartera-icon-192.png"
-              alt=""
-              width={28}
-              height={28}
-              className="h-7 w-7"
-            />
-            <span className="font-sans text-[11px] uppercase tracking-[0.2em]">
-              Cartera
-            </span>
-          </Link>
+          <MarcaCartera />
           <div className="flex items-center gap-4">
             <NavCartera />
             <BotonSalir />
